@@ -118,6 +118,9 @@ public sealed partial class MainWindow : Window
         SubscriptionManagementItem.Visibility =
             Visibility.Collapsed;
 
+        PurchaseManagementItem.Visibility =
+            Visibility.Collapsed;
+
 
         var role =
             CurrentUser.Role;
@@ -199,6 +202,9 @@ public sealed partial class MainWindow : Window
                 Visibility.Visible;
 
             TermsAndConditionItem.Visibility =
+                Visibility.Visible;
+
+            PurchaseManagementItem.Visibility =
                 Visibility.Visible;
 
 
@@ -538,6 +544,8 @@ public sealed partial class MainWindow : Window
         SubscriptionManagementItem.Visibility =
             Visibility.Collapsed;
 
+        PurchaseManagementItem.Visibility =
+            Visibility.Collapsed;
 
         HomeItem.IsSelected = false;
 
@@ -629,6 +637,10 @@ public sealed partial class MainWindow : Window
 
                 case "subscription-management":
                     NavigateToSubscriptionManagementPage();
+                    break;
+
+                case "purchase-management":
+                    NavigateToPurchaseManagementPage();
                     break;
             }
         }
@@ -975,6 +987,20 @@ public sealed partial class MainWindow : Window
             App.Services
                 .GetRequiredService<
                     SubscriptionManagementPage>();
+
+        NavFrame.Content = page;
+    }
+
+    // ==========================================
+    // PURCHASE MANAGEMENT
+    // ==========================================
+
+    private void NavigateToPurchaseManagementPage()
+    {
+        var page =
+            App.Services
+                .GetRequiredService<
+                    PurchaseManagementPage>();
 
         NavFrame.Content = page;
     }

@@ -307,6 +307,20 @@
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
+                    <!-- PURCHASE MANAGEMENT -->
+                    <NavigationViewItem
+                        x:Name="PurchaseManagementItem"
+                        Content="Purchase Management"
+                        Tag="purchase-management">
+
+                        <NavigationViewItem.Icon>
+                            <FontIcon
+                                FontFamily="Segoe MDL2 Assets"
+                                Glyph="&#xE7BF;" />
+                        </NavigationViewItem.Icon>
+
+                    </NavigationViewItem>
+
                     <!-- SYSTEM SETTINGS -->
                     <NavigationViewItem
                     x:Name="SystemSettingsItem"

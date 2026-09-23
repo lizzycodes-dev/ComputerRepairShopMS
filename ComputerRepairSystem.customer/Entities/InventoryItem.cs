@@ -22,11 +22,14 @@ public class InventoryItem
 
     public decimal ReorderLevel { get; set; }
 
+    public int? SupplierId { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Relationships
+    public Supplier? Supplier { get; set; }
     public ICollection<RepairItem> RepairItems { get; set; }
         = new List<RepairItem>();
 

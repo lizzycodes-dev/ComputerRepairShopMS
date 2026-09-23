@@ -1,0 +1,449 @@
+<Page
+    x:Class="ComputerRepairSystem_winui.Pages.PurchaseManagementPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer
+        VerticalScrollBarVisibility="Auto">
+
+        <StackPanel
+            Padding="24"
+            Spacing="20">
+
+            <!-- ========================================== -->
+            <!-- HEADER -->
+            <!-- ========================================== -->
+
+            <StackPanel
+                Spacing="4">
+
+                <TextBlock
+                    Text="Purchase Management"
+                    FontSize="30"
+                    FontWeight="SemiBold"/>
+
+                <TextBlock
+                    Text="Record purchases from suppliers and update inventory stock."
+                    Opacity="0.7"/>
+
+            </StackPanel>
+
+
+            <!-- ========================================== -->
+            <!-- PURCHASE TABS -->
+            <!-- ========================================== -->
+            
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TabView
+                    x:Name="PurchaseTabView"
+                    Grid.Column="0"
+                    IsAddTabButtonVisible="False"
+                    HorizontalAlignment="Stretch">
+
+
+                    <!-- ====================================== -->
+                <!-- PURCHASE TRANSACTIONS TAB -->
+                <!-- ====================================== -->
+
+                <TabViewItem
+                    Header="Purchase Transactions"
+                    IsClosable="False">
+
+                    <Border
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Margin="0,8,0,0">
+
+                        <StackPanel
+                            Spacing="12">
+
+                            <TextBlock
+                                Text="Purchase Transactions"
+                                FontSize="20"
+                                FontWeight="SemiBold"/>
+
+
+                            <!-- PURCHASE LIST -->
+
+                            <ListView
+                                x:Name="PurchaseListView"
+                                SelectionMode="Single"
+                                SelectionChanged="PurchaseListView_SelectionChanged">
+
+                                <ListView.Header>
+
+                                    <Grid
+                                        Padding="8">
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="1.5*"/>
+                                        </Grid.ColumnDefinitions>
+
+
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="Purchase #"
+                                            FontWeight="SemiBold"/>
+
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="Supplier"
+                                            FontWeight="SemiBold"/>
+
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="Purchase Date"
+                                            FontWeight="SemiBold"/>
+
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            Text="Status"
+                                            FontWeight="SemiBold"/>
+
+                                        <TextBlock
+                                            Grid.Column="4"
+                                            Text="Total"
+                                            FontWeight="SemiBold"/>
+
+                                    </Grid>
+
+                                </ListView.Header>
+
+
+                                <ListView.ItemTemplate>
+
+                                    <DataTemplate>
+
+                                        <Grid
+                                            Padding="8">
+
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="1.2*"/>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="1.2*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                            </Grid.ColumnDefinitions>
+
+
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                Text="{Binding PurchaseOrderNumber}"/>
+
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Text="{Binding SupplierName}"/>
+
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                Text="{Binding PurchaseDateText}"/>
+
+                                            <TextBlock
+                                                Grid.Column="3"
+                                                Text="{Binding Status}"/>
+
+                                            <TextBlock
+                                                Grid.Column="4"
+                                                Text="{Binding TotalAmountText}"/>
+
+                                        </Grid>
+
+                                    </DataTemplate>
+
+                                </ListView.ItemTemplate>
+
+                            </ListView>
+
+
+                            <!-- EMPTY STATE -->
+
+                            <TextBlock
+                                x:Name="EmptyStateText"
+                                Text="No purchase transactions have been recorded yet."
+                                HorizontalAlignment="Center"
+                                Margin="0,20,0,10"
+                                Opacity="0.6"
+                                Visibility="Collapsed"/>
+
+                        </StackPanel>
+
+                    </Border>
+
+                </TabViewItem>
+                    
+
+
+
+                <!-- ====================================== -->
+                <!-- PURCHASE DETAILS TAB -->
+                <!-- ====================================== -->
+
+                <TabViewItem
+                    x:Name="PurchaseDetailsTab"
+                    Header="Purchase Details"
+                    IsClosable="False">
+
+                    <Border
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Margin="0,8,0,0">
+
+                        <StackPanel
+                            Spacing="16">
+
+                            <TextBlock
+                                Text="Purchase Details"
+                                FontSize="20"
+                                FontWeight="SemiBold"/>
+
+
+                            <!-- ================================== -->
+                            <!-- PURCHASE INFORMATION -->
+                            <!-- ================================== -->
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+
+                                <!-- PURCHASE NUMBER -->
+
+                                <StackPanel
+                                    Grid.Column="0"
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Purchase Number"
+                                        Opacity="0.7"/>
+
+                                    <TextBlock
+                                        x:Name="PurchaseNumberText"
+                                        Text="—"
+                                        FontWeight="SemiBold"/>
+
+                                </StackPanel>
+
+
+                                <!-- SUPPLIER -->
+
+                                <StackPanel
+                                    Grid.Column="1"
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Supplier"
+                                        Opacity="0.7"/>
+
+                                    <TextBlock
+                                        x:Name="SupplierText"
+                                        Text="—"
+                                        FontWeight="SemiBold"/>
+
+                                </StackPanel>
+
+
+                                <!-- PURCHASE DATE -->
+
+                                <StackPanel
+                                    Grid.Column="2"
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Purchase Date"
+                                        Opacity="0.7"/>
+
+                                    <TextBlock
+                                        x:Name="PurchaseDateText"
+                                        Text="—"
+                                        FontWeight="SemiBold"/>
+
+                                </StackPanel>
+
+
+                                <!-- STATUS -->
+
+                                <StackPanel
+                                    Grid.Column="3"
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Status"
+                                        Opacity="0.7"/>
+
+                                    <TextBlock
+                                        x:Name="PurchaseStatusText"
+                                        Text="—"
+                                        FontWeight="SemiBold"/>
+
+                                </StackPanel>
+
+                            </Grid>
+
+
+
+                            <!-- ================================== -->
+                            <!-- PURCHASE ITEMS -->
+                            <!-- ================================== -->
+
+                            <TextBlock
+                                Text="Purchased Items"
+                                FontSize="17"
+                                FontWeight="SemiBold"
+                                Margin="0,8,0,0"/>
+
+
+                            <ListView
+                                x:Name="PurchaseItemsListView"
+                                SelectionMode="None">
+
+                                <ListView.Header>
+
+                                    <Grid
+                                        Padding="8">
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2.5*"/>
+                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="1.5*"/>
+                                        </Grid.ColumnDefinitions>
+
+
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="Item"
+                                            FontWeight="SemiBold"/>
+
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="Quantity"
+                                            FontWeight="SemiBold"/>
+
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="Unit Cost"
+                                            FontWeight="SemiBold"/>
+
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            Text="Subtotal"
+                                            FontWeight="SemiBold"/>
+
+                                    </Grid>
+
+                                </ListView.Header>
+
+
+                                <ListView.ItemTemplate>
+
+                                    <DataTemplate>
+
+                                        <Grid
+                                            Padding="8">
+
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2.5*"/>
+                                                <ColumnDefinition Width="1.2*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                            </Grid.ColumnDefinitions>
+
+
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                Text="{Binding ItemName}"/>
+
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Text="{Binding QuantityText}"/>
+
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                Text="{Binding UnitCostText}"/>
+
+                                            <TextBlock
+                                                Grid.Column="3"
+                                                Text="{Binding SubtotalText}"/>
+
+                                        </Grid>
+
+                                    </DataTemplate>
+
+                                </ListView.ItemTemplate>
+
+                            </ListView>
+
+
+
+                            <!-- ================================== -->
+                            <!-- TOTAL -->
+                            <!-- ================================== -->
+
+                            <Border
+                                HorizontalAlignment="Right"
+                                Padding="20,10"
+                                CornerRadius="6">
+
+                                <StackPanel
+                                    Orientation="Horizontal"
+                                    Spacing="12">
+
+                                    <TextBlock
+                                        Text="Total Purchase:"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        x:Name="SelectedPurchaseTotalText"
+                                        Text="₱0.00"
+                                        FontWeight="Bold"
+                                        FontSize="18"/>
+
+                                </StackPanel>
+
+                            </Border>
+
+                        </StackPanel>
+
+                    </Border>
+
+                </TabViewItem>
+
+            </TabView>
+
+                <Button
+                    x:Name="AddNewPurchaseButton"
+                    Grid.Column="1"
+                    Content="Add New Purchase"
+                    Click="AddNewPurchaseButton_Click"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Top"/>
+            </Grid>
+
+
+        </StackPanel>
+
+    </ScrollViewer>
+
+</Page>

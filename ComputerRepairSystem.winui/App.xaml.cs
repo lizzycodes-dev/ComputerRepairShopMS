@@ -162,6 +162,8 @@ public partial class App : Application
 
         services.AddTransient<SubscriptionAccessService>();
 
+        services.AddTransient<PurchaseManagementPage>();
+
         // ==========================================
         // MAIN WINDOW
         // ==========================================

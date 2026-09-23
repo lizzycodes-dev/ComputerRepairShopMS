@@ -52,6 +52,12 @@ public class TenantDbContext : DbContext
     public DbSet<Inventory> Inventories => Set<Inventory>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
 
+    public DbSet<PurchaseOrder> PurchaseOrders
+        => Set<PurchaseOrder>();
+
+    public DbSet<PurchaseOrderItem> PurchaseOrderItems
+        => Set<PurchaseOrderItem>();
+
     // ==========================================
     // Billing & Payments
     // ==========================================
@@ -59,6 +65,7 @@ public class TenantDbContext : DbContext
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Expense> Expenses => Set<Expense>();
+
 
     // System Settings
 
@@ -435,6 +442,12 @@ public class TenantDbContext : DbContext
 
             entity.Property(x => x.ReorderLevel)
                 .HasPrecision(18, 2);
+
+            entity.HasOne(x => x.Supplier)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
 
@@ -614,6 +627,58 @@ public class TenantDbContext : DbContext
                 x.IsSynced,
                 x.CreatedAt
             });
+        });
+        modelBuilder.Entity<PurchaseOrder>(entity =>
+        {
+            entity.HasKey(x => x.PurchaseOrderId);
+
+            entity.Property(x => x.PurchaseOrderNumber)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.Status)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.TotalAmount)
+                .HasPrecision(18, 2);
+
+            entity.Property(x => x.Notes)
+                .HasMaxLength(500);
+
+            entity.HasIndex(x => x.PurchaseOrderNumber)
+                .IsUnique();
+
+            entity.HasOne(x => x.Supplier)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<PurchaseOrderItem>(entity =>
+        {
+            entity.HasKey(x => x.PurchaseOrderItemId);
+
+            entity.Property(x => x.Quantity)
+                .HasPrecision(18, 2);
+
+            entity.Property(x => x.UnitCost)
+                .HasPrecision(18, 2);
+
+            entity.HasOne(x => x.PurchaseOrder)
+                .WithMany(x => x.Items)
+                .HasForeignKey(x => x.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
