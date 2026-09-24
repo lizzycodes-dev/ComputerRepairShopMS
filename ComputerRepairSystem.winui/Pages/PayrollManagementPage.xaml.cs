@@ -39,7 +39,30 @@ public sealed partial class PayrollManagementPage : Page
     // ==========================================
     // LOAD PAYROLLS
     // ==========================================
+    private void UpdatePayrollSummary(
+        List<Payroll> payrolls)
+    {
+        PayrollEmployeeCountText.Text =
+            payrolls.Count.ToString();
 
+        var totalBasicSalary =
+            payrolls.Sum(x => x.BasicSalary);
+
+        var totalDeductions =
+            payrolls.Sum(x => x.Deductions);
+
+        var totalNetSalary =
+            payrolls.Sum(x => x.NetSalary);
+
+        PayrollBasicSalaryText.Text =
+            $"₱{totalBasicSalary:N2}";
+
+        PayrollDeductionsText.Text =
+            $"₱{totalDeductions:N2}";
+
+        PayrollNetSalaryText.Text =
+            $"₱{totalNetSalary:N2}";
+    }
     private async Task LoadPayrollsAsync()
     {
         try
@@ -101,6 +124,7 @@ public sealed partial class PayrollManagementPage : Page
                     .ToList();
 
             PayrollList.ItemsSource = rows;
+            UpdatePayrollSummary(payrolls);
         }
         catch (Exception ex)
         {
@@ -283,18 +307,35 @@ public sealed partial class PayrollManagementPage : Page
                 };
 
 
-            var deductionsBox =
+            var otherDeductionsBox =
                 new NumberBox
                 {
-                    Header = "Deductions",
-                    PlaceholderText = "Enter deductions",
+                    Header = "Other Deductions",
+                    PlaceholderText = "Enter other deductions",
                     Minimum = 0,
                     Value = 0,
                     SpinButtonPlacementMode =
                         NumberBoxSpinButtonPlacementMode.Compact
                 };
 
+            var attendanceSummaryText =
+                new TextBlock
+                {
+                    Text =
+                        "Attendance: Select an employee and pay period.",
+                    TextWrapping = TextWrapping.Wrap,
+                    Opacity = 0.8
+                };
 
+
+            var attendanceDeductionText =
+                new TextBlock
+                {
+                    Text =
+                        "Attendance Deduction: ₱0.00",
+                    FontWeight =
+                        Microsoft.UI.Text.FontWeights.SemiBold
+                };
             var netSalaryText =
                 new TextBlock
                 {
@@ -305,6 +346,9 @@ public sealed partial class PayrollManagementPage : Page
                 };
 
 
+            decimal attendanceDeduction = 0;
+
+
             void UpdateNetSalary()
             {
                 var basic =
@@ -312,24 +356,213 @@ public sealed partial class PayrollManagementPage : Page
                         ? 0
                         : basicSalaryBox.Value;
 
-                var deductions =
-                    double.IsNaN(deductionsBox.Value)
+                var otherDeductions =
+                    double.IsNaN(otherDeductionsBox.Value)
                         ? 0
-                        : deductionsBox.Value;
+                        : otherDeductionsBox.Value;
+
+                var totalDeductions =
+                    (decimal)otherDeductions +
+                    attendanceDeduction;
 
                 var net =
-                    Math.Max(0, basic - deductions);
+                    Math.Max(
+                        0,
+                        (decimal)basic -
+                        totalDeductions);
 
                 netSalaryText.Text =
                     $"Net Salary: ₱{net:N2}";
             }
+            async Task RefreshAttendancePreviewAsync()
+            {
+                if (employeeBox.SelectedItem
+                    is not Employee selectedEmployee)
+                {
+                    attendanceDeduction = 0;
 
+                    attendanceSummaryText.Text =
+                        "Attendance: Select an employee and pay period.";
+
+                    attendanceDeductionText.Text =
+                        "Attendance Deduction: ₱0.00";
+
+                    UpdateNetSalary();
+
+                    return;
+                }
+
+
+                if (!startDatePicker.Date.HasValue ||
+                    !endDatePicker.Date.HasValue)
+                {
+                    attendanceDeduction = 0;
+
+                    attendanceSummaryText.Text =
+                        "Attendance: Select both pay period dates.";
+
+                    attendanceDeductionText.Text =
+                        "Attendance Deduction: ₱0.00";
+
+                    UpdateNetSalary();
+
+                    return;
+                }
+
+
+                var startDate =
+                    startDatePicker.Date.Value.DateTime.Date;
+
+                var endDate =
+                    endDatePicker.Date.Value.DateTime.Date;
+
+
+                if (endDate < startDate)
+                {
+                    attendanceDeduction = 0;
+
+                    attendanceSummaryText.Text =
+                        "Attendance: Invalid pay period.";
+
+                    attendanceDeductionText.Text =
+                        "Attendance Deduction: ₱0.00";
+
+                    UpdateNetSalary();
+
+                    return;
+                }
+
+
+                var attendanceRecords =
+                    await db.Attendances
+                        .AsNoTracking()
+                        .Where(x =>
+                            x.EmployeeId ==
+                                selectedEmployee.EmployeeId
+                            &&
+                            x.AttendanceDate.Date >=
+                                startDate
+                            &&
+                            x.AttendanceDate.Date <=
+                                endDate)
+                        .ToListAsync();
+
+
+                var presentCount =
+                    attendanceRecords.Count(x =>
+                        string.Equals(
+                            x.Status,
+                            "Present",
+                            StringComparison.OrdinalIgnoreCase));
+
+
+                var lateCount =
+                    attendanceRecords.Count(x =>
+                        string.Equals(
+                            x.Status,
+                            "Late",
+                            StringComparison.OrdinalIgnoreCase));
+
+
+                var absentCount =
+                    attendanceRecords.Count(x =>
+                        string.Equals(
+                            x.Status,
+                            "Absent",
+                            StringComparison.OrdinalIgnoreCase));
+
+
+                var leaveCount =
+                    attendanceRecords.Count(x =>
+                        string.Equals(
+                            x.Status,
+                            "Leave",
+                            StringComparison.OrdinalIgnoreCase));
+
+
+                var weekdays =
+                    Enumerable
+                        .Range(
+                            0,
+                            (endDate - startDate).Days + 1)
+                        .Select(days => startDate.AddDays(days))
+                        .Count(x =>
+                            x.DayOfWeek != DayOfWeek.Saturday &&
+                            x.DayOfWeek != DayOfWeek.Sunday);
+
+
+                var basicSalary =
+                    double.IsNaN(basicSalaryBox.Value)
+                        ? 0
+                        : basicSalaryBox.Value;
+
+
+                decimal dailyRate = 0;
+
+
+                if (weekdays > 0 &&
+                    basicSalary > 0)
+                {
+                    dailyRate =
+                        (decimal)basicSalary /
+                        weekdays;
+                }
+
+
+                attendanceDeduction =
+                    dailyRate *
+                    absentCount;
+
+
+                attendanceSummaryText.Text =
+                    $"Attendance: " +
+                    $"Present {presentCount}  •  " +
+                    $"Late {lateCount}  •  " +
+                    $"Absent {absentCount}  •  " +
+                    $"Leave {leaveCount}";
+
+
+                attendanceDeductionText.Text =
+                    $"Attendance Deduction: " +
+                    $"₱{attendanceDeduction:N2}";
+
+
+                UpdateNetSalary();
+            }
 
             basicSalaryBox.ValueChanged +=
-                (_, _) => UpdateNetSalary();
+                async (_, _) =>
+                {
+                    await RefreshAttendancePreviewAsync();
+                };
 
-            deductionsBox.ValueChanged +=
-                (_, _) => UpdateNetSalary();
+
+            otherDeductionsBox.ValueChanged +=
+                (_, _) =>
+                {
+                    UpdateNetSalary();
+                };
+
+
+            employeeBox.SelectionChanged +=
+                async (_, _) =>
+                {
+                    await RefreshAttendancePreviewAsync();
+                };
+
+
+            startDatePicker.DateChanged +=
+                async (_, _) =>
+                {
+                    await RefreshAttendancePreviewAsync();
+                };
+
+
+            endDatePicker.DateChanged +=
+                async (_, _) =>
+                {
+                    await RefreshAttendancePreviewAsync();
+                };
 
 
             var panel =
@@ -342,8 +575,18 @@ public sealed partial class PayrollManagementPage : Page
             panel.Children.Add(startDatePicker);
             panel.Children.Add(endDatePicker);
             panel.Children.Add(basicSalaryBox);
-            panel.Children.Add(deductionsBox);
-            panel.Children.Add(netSalaryText);
+
+            panel.Children.Add(
+                attendanceSummaryText);
+
+            panel.Children.Add(
+                attendanceDeductionText);
+
+            panel.Children.Add(
+                otherDeductionsBox);
+
+            panel.Children.Add(
+                netSalaryText);
 
 
             var dialog =
@@ -422,11 +665,16 @@ public sealed partial class PayrollManagementPage : Page
                         : basicSalaryBox.Value);
 
 
-            var deductions =
+            var otherDeductions =
                 (decimal)(
-                    double.IsNaN(deductionsBox.Value)
+                    double.IsNaN(otherDeductionsBox.Value)
                         ? 0
-                        : deductionsBox.Value);
+                        : otherDeductionsBox.Value);
+
+
+            var deductions =
+                otherDeductions +
+                attendanceDeduction;
 
 
             if (basicSalary <= 0)
@@ -511,8 +759,37 @@ public sealed partial class PayrollManagementPage : Page
                         basicSalary - deductions
                 };
 
-
             db.Payrolls.Add(payroll);
+
+            await db.SaveChangesAsync();
+
+
+            // ==========================================
+            // CREATE FINANCE PAYROLL EXPENSE
+            // ==========================================
+
+            var payrollExpense =
+                new Expense
+                {
+                    PayrollId =
+                        payroll.PayrollId,
+
+                    Category = "Payroll",
+
+                    Amount =
+                        payroll.NetSalary,
+
+                    ExpenseDate =
+                        payroll.PayPeriodEnd,
+
+                    Description =
+                        $"Payroll for {selectedEmployee.FirstName} " +
+                        $"{selectedEmployee.LastName} " +
+                        $"({payPeriodStart:MM/dd/yyyy} - " +
+                        $"{payPeriodEnd:MM/dd/yyyy})"
+                };
+
+            db.Expenses.Add(payrollExpense);
 
             await db.SaveChangesAsync();
 
@@ -834,8 +1111,31 @@ public sealed partial class PayrollManagementPage : Page
                 basicSalary - deductions;
 
 
-            await db.SaveChangesAsync();
+            // ==========================================
+            // UPDATE FINANCE PAYROLL EXPENSE
+            // ==========================================
 
+            var payrollExpense =
+                await db.Expenses
+                    .FirstOrDefaultAsync(
+                        x => x.PayrollId == payroll.PayrollId);
+
+            if (payrollExpense != null)
+            {
+                payrollExpense.Amount =
+                    payroll.NetSalary;
+
+                payrollExpense.ExpenseDate =
+                    payroll.PayPeriodEnd;
+
+                payrollExpense.Description =
+                    $"Payroll for {payroll.Employee!.FirstName} " +
+                    $"{payroll.Employee.LastName} " +
+                    $"({payroll.PayPeriodStart:MM/dd/yyyy} - " +
+                    $"{payroll.PayPeriodEnd:MM/dd/yyyy})";
+            }
+
+            await db.SaveChangesAsync();
 
             await LoadPayrollsAsync();
 
@@ -921,6 +1221,25 @@ public sealed partial class PayrollManagementPage : Page
                 return;
             }
 
+
+            // ==========================================
+            // DELETE RELATED FINANCE PAYROLL EXPENSE
+            // ==========================================
+
+            var payrollExpense =
+                await db.Expenses
+                    .FirstOrDefaultAsync(
+                        x => x.PayrollId == payroll.PayrollId);
+
+            if (payrollExpense != null)
+            {
+                db.Expenses.Remove(payrollExpense);
+            }
+
+
+            // ==========================================
+            // DELETE PAYROLL
+            // ==========================================
 
             db.Payrolls.Remove(payroll);
 

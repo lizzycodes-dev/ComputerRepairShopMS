@@ -34,8 +34,69 @@ public sealed partial class FinanceManagementPage : Page
         await LoadInvoicesAsync();
         await LoadPaymentsAsync();
         await LoadExpensesAsync();
+        await LoadFinancialReportsAsync();
     }
 
+    // ==========================================
+    // LOAD FINANCIAL REPORTS
+    // ==========================================
+
+    private async Task LoadFinancialReportsAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+        {
+            ReportRevenueText.Text = "₱0.00";
+            ReportExpensesText.Text = "₱0.00";
+            ReportNetIncomeText.Text = "₱0.00";
+            ReportLastUpdatedText.Text = "Last updated: --";
+
+            return;
+        }
+
+        try
+        {
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
+
+            // Revenue = completed customer payments
+            var revenue =
+                await db.Payments
+                    .Where(x => x.Status == "Completed")
+                    .SumAsync(x =>
+                        (decimal?)x.Amount)
+                    ?? 0;
+
+            // Operating expenses = recorded expenses
+            var expenses =
+                await db.Expenses
+                    .SumAsync(x =>
+                        (decimal?)x.Amount)
+                    ?? 0;
+
+            // Net income = revenue - expenses
+            var netIncome =
+                revenue - expenses;
+
+            ReportRevenueText.Text =
+                $"₱{revenue:N2}";
+
+            ReportExpensesText.Text =
+                $"₱{expenses:N2}";
+
+            ReportNetIncomeText.Text =
+                $"₱{netIncome:N2}";
+
+            ReportLastUpdatedText.Text =
+                $"Last updated: {DateTime.Now:MM/dd/yyyy hh:mm tt}";
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync(
+                "Error Loading Financial Reports",
+                ex.Message);
+        }
+    }
 
     // ==========================================
     // LOAD INVOICES
@@ -1225,6 +1286,7 @@ public sealed partial class FinanceManagementPage : Page
 
             await LoadPaymentsAsync();
             await LoadInvoicesAsync();
+            await LoadFinancialReportsAsync();
 
             await ShowMessageAsync(
                 "Payment Added",
@@ -1444,6 +1506,7 @@ public sealed partial class FinanceManagementPage : Page
 
             await LoadPaymentsAsync();
             await LoadInvoicesAsync();
+            await LoadFinancialReportsAsync();
 
             await ShowMessageAsync(
                 "Payment Updated",
@@ -1530,6 +1593,7 @@ public sealed partial class FinanceManagementPage : Page
 
             await LoadPaymentsAsync();
             await LoadInvoicesAsync();
+            await LoadFinancialReportsAsync();
 
             await ShowMessageAsync(
                 "Payment Deleted",
@@ -1740,6 +1804,7 @@ public sealed partial class FinanceManagementPage : Page
         object sender,
         RoutedEventArgs e)
     {
+
         if (CurrentUser.CompanyId == null)
         {
             return;
@@ -1758,13 +1823,30 @@ public sealed partial class FinanceManagementPage : Page
                     .OrderBy(x => x.BranchName)
                     .ToListAsync();
 
+            var branchOptions =
+                new List<BranchOption>
+                {
+                    new BranchOption
+                    {
+                        BranchId = null,
+                        BranchName = "Company-wide / No specific branch"
+                    }
+                };
+
+            branchOptions.AddRange(
+                branches.Select(x => new BranchOption
+                {
+                    BranchId = x.BranchId,
+                    BranchName = x.BranchName
+                }));
+
             var branchBox =
                 new ComboBox
                 {
                     Header = "Branch",
-                    PlaceholderText = "Select branch",
-                    ItemsSource = branches,
+                    ItemsSource = branchOptions,
                     DisplayMemberPath = "BranchName",
+                    SelectedIndex = 0,
                     MinWidth = 320
                 };
 
@@ -1848,15 +1930,6 @@ public sealed partial class FinanceManagementPage : Page
                 return;
             }
 
-            if (branchBox.SelectedItem
-                is not Branch selectedBranch)
-            {
-                await ShowMessageAsync(
-                    "Validation Error",
-                    "Please select a branch.");
-                return;
-            }
-
             var category =
                 categoryBox.SelectedItem?.ToString();
 
@@ -1890,11 +1963,17 @@ public sealed partial class FinanceManagementPage : Page
                 return;
             }
 
+            var selectedBranch =
+                branchBox.SelectedItem as BranchOption;
+
+            int? branchId =
+                selectedBranch?.BranchId;
+
             var expense =
                 new Expense
                 {
                     BranchId =
-                        selectedBranch.BranchId,
+                        branchId,
 
                     Category =
                         category,
@@ -1917,6 +1996,7 @@ public sealed partial class FinanceManagementPage : Page
             await db.SaveChangesAsync();
 
             await LoadExpensesAsync();
+            await LoadFinancialReportsAsync();
 
             await ShowMessageAsync(
                 "Expense Added",
@@ -1973,16 +2053,51 @@ public sealed partial class FinanceManagementPage : Page
                     .OrderBy(x => x.BranchName)
                     .ToListAsync();
 
+            // ==========================================
+            // BRANCH
+            // ==========================================
+
+            var branchOptions =
+                new List<BranchOption>
+                {
+                new BranchOption
+                {
+                    BranchId = null,
+                    BranchName =
+                        "Company-wide / No specific branch"
+                }
+                };
+
+            branchOptions.AddRange(
+                branches.Select(x => new BranchOption
+                {
+                    BranchId = x.BranchId,
+                    BranchName = x.BranchName
+                }));
+
             var branchBox =
                 new ComboBox
                 {
                     Header = "Branch",
-                    ItemsSource = branches,
+                    ItemsSource = branchOptions,
                     DisplayMemberPath = "BranchName",
-                    SelectedValuePath = "BranchId",
-                    SelectedValue = expense.BranchId,
                     MinWidth = 320
                 };
+
+            // Select the expense's current branch
+            var currentBranchIndex =
+                branchOptions.FindIndex(
+                    x => x.BranchId == expense.BranchId);
+
+            branchBox.SelectedIndex =
+                currentBranchIndex >= 0
+                    ? currentBranchIndex
+                    : 0;
+
+
+            // ==========================================
+            // CATEGORY
+            // ==========================================
 
             var categoryBox =
                 new ComboBox
@@ -2010,6 +2125,11 @@ public sealed partial class FinanceManagementPage : Page
                 }
             }
 
+
+            // ==========================================
+            // AMOUNT
+            // ==========================================
+
             var amountBox =
                 new NumberBox
                 {
@@ -2020,6 +2140,11 @@ public sealed partial class FinanceManagementPage : Page
                         NumberBoxSpinButtonPlacementMode.Compact
                 };
 
+
+            // ==========================================
+            // DATE
+            // ==========================================
+
             var datePicker =
                 new CalendarDatePicker
                 {
@@ -2028,6 +2153,11 @@ public sealed partial class FinanceManagementPage : Page
                         new DateTimeOffset(
                             expense.ExpenseDate)
                 };
+
+
+            // ==========================================
+            // DESCRIPTION
+            // ==========================================
 
             var descriptionBox =
                 new TextBox
@@ -2041,6 +2171,11 @@ public sealed partial class FinanceManagementPage : Page
                     MinHeight = 90
                 };
 
+
+            // ==========================================
+            // PANEL
+            // ==========================================
+
             var panel =
                 new StackPanel
                 {
@@ -2052,6 +2187,11 @@ public sealed partial class FinanceManagementPage : Page
             panel.Children.Add(amountBox);
             panel.Children.Add(datePicker);
             panel.Children.Add(descriptionBox);
+
+
+            // ==========================================
+            // DIALOG
+            // ==========================================
 
             var dialog =
                 new ContentDialog
@@ -2076,14 +2216,10 @@ public sealed partial class FinanceManagementPage : Page
                 return;
             }
 
-            if (branchBox.SelectedValue
-                is not int branchId)
-            {
-                await ShowMessageAsync(
-                    "Validation Error",
-                    "Please select a branch.");
-                return;
-            }
+
+            // ==========================================
+            // VALIDATION
+            // ==========================================
 
             var category =
                 categoryBox.SelectedItem?.ToString();
@@ -2118,6 +2254,22 @@ public sealed partial class FinanceManagementPage : Page
                 return;
             }
 
+
+            // ==========================================
+            // GET SELECTED BRANCH
+            // ==========================================
+
+            var selectedBranch =
+                branchBox.SelectedItem as BranchOption;
+
+            int? branchId =
+                selectedBranch?.BranchId;
+
+
+            // ==========================================
+            // UPDATE EXPENSE
+            // ==========================================
+
             expense.BranchId =
                 branchId;
 
@@ -2136,9 +2288,15 @@ public sealed partial class FinanceManagementPage : Page
                     ? null
                     : descriptionBox.Text.Trim();
 
+
+            // ==========================================
+            // SAVE
+            // ==========================================
+
             await db.SaveChangesAsync();
 
             await LoadExpensesAsync();
+            await LoadFinancialReportsAsync();
 
             await ShowMessageAsync(
                 "Expense Updated",
@@ -2217,6 +2375,7 @@ public sealed partial class FinanceManagementPage : Page
             await db.SaveChangesAsync();
 
             await LoadExpensesAsync();
+            await LoadFinancialReportsAsync();
 
             await ShowMessageAsync(
                 "Expense Deleted",
@@ -2255,6 +2414,13 @@ public sealed partial class FinanceManagementPage : Page
     // ==========================================
     // DISPLAY ROWS
     // ==========================================
+
+    private sealed class BranchOption
+    {
+        public int? BranchId { get; set; }
+
+        public string BranchName { get; set; } = string.Empty;
+    }
 
     private sealed class InvoiceRow
     {

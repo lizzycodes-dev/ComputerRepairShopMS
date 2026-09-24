@@ -646,6 +646,179 @@
                 </Grid>
 
             </TabViewItem>
+            <!-- ================================== -->
+            <!-- FINANCIAL REPORTS -->
+            <!-- ================================== -->
+
+            <TabViewItem
+                Header="Financial Reports"
+                IsClosable="False">
+
+                <ScrollViewer
+                    Padding="0,16,0,0">
+
+                    <StackPanel
+                        Spacing="20">
+
+                        <!-- REPORT HEADER -->
+
+                        <StackPanel
+                            Spacing="4">
+
+                            <TextBlock
+                                Text="Financial Reports"
+                                FontSize="24"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Text="View the financial performance of the business."
+                                Opacity="0.7"/>
+
+                        </StackPanel>
+
+
+                        <!-- INCOME STATEMENT -->
+
+                        <Border
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="20">
+
+                            <StackPanel
+                                Spacing="16">
+
+                                <TextBlock
+                                    Text="Income Statement"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Text="Summary of revenue, expenses, and net income."
+                                    Opacity="0.7"/>
+
+
+                                <!-- REVENUE -->
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Revenue"
+                                        FontSize="16"/>
+
+                                    <TextBlock
+                                        x:Name="ReportRevenueText"
+                                        Grid.Column="1"
+                                        Text="₱0.00"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"/>
+
+                                </Grid>
+
+
+                                <!-- EXPENSES -->
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Operating Expenses"
+                                        FontSize="16"/>
+
+                                    <TextBlock
+                                        x:Name="ReportExpensesText"
+                                        Grid.Column="1"
+                                        Text="₱0.00"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"/>
+
+                                </Grid>
+
+
+                                <!-- SEPARATOR -->
+
+                                <Rectangle
+                                    Height="1"
+                                    HorizontalAlignment="Stretch"
+                                    Opacity="0.3"/>
+
+
+                                <!-- NET INCOME -->
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Net Income"
+                                        FontSize="18"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        x:Name="ReportNetIncomeText"
+                                        Grid.Column="1"
+                                        Text="₱0.00"
+                                        FontSize="18"
+                                        FontWeight="SemiBold"/>
+
+                                </Grid>
+
+                            </StackPanel>
+
+                        </Border>
+
+
+                        <!-- REPORT INFORMATION -->
+
+                        <Border
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="20">
+
+                            <StackPanel
+                                Spacing="10">
+
+                                <TextBlock
+                                    Text="Report Information"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Text="Revenue is based on completed customer payments."
+                                    Opacity="0.7"/>
+
+                                <TextBlock
+                                    Text="Operating expenses are based on recorded business expenses."
+                                    Opacity="0.7"/>
+
+                                <TextBlock
+                                    x:Name="ReportLastUpdatedText"
+                                    Text="Last updated: --"
+                                    Opacity="0.7"/>
+
+                            </StackPanel>
+
+                        </Border>
+
+                    </StackPanel>
+
+                </ScrollViewer>
+
+            </TabViewItem>
 
         </TabView>
 

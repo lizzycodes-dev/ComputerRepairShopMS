@@ -15,4 +15,7 @@ public class Expense
     public string? Description { get; set; }
 
     public Branch? Branch { get; set; }
+
+    public int? PayrollId { get; set; }
+    public Payroll? Payroll { get; set; }
 }
