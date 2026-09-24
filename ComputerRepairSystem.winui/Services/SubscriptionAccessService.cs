@@ -85,4 +85,55 @@ public class SubscriptionAccessService
             moduleCodes,
             StringComparer.OrdinalIgnoreCase);
     }
+
+    public async Task<HashSet<string>>
+        GetAccessibleModuleCodesAsync(int companyId)
+    {
+        // ==========================================
+        // GET MODULES FOR SPECIFIC COMPANY
+        // ==========================================
+
+        using var scope =
+            _scopeFactory.CreateScope();
+
+        var db =
+            scope.ServiceProvider
+                .GetRequiredService<MasterErpDbContext>();
+
+        var now = DateTime.UtcNow;
+
+        var moduleCodes =
+            await (
+                from subscription
+                    in db.Subscriptions.AsNoTracking()
+
+                join planModule
+                    in db.SubscriptionPlanModules.AsNoTracking()
+                    on subscription.SubscriptionPlanId
+                    equals planModule.SubscriptionPlanId
+
+                join module
+                    in db.ModuleDefinitions.AsNoTracking()
+                    on planModule.ModuleDefinitionId
+                    equals module.ModuleDefinitionId
+
+                where
+                    subscription.CompanyId == companyId
+                    && subscription.Status == "Active"
+                    && subscription.StartDate <= now
+                    && (
+                        subscription.EndDate == null
+                        || subscription.EndDate > now
+                    )
+                    && module.IsActive
+
+                select module.ModuleCode
+            )
+            .Distinct()
+            .ToListAsync();
+
+        return new HashSet<string>(
+            moduleCodes,
+            StringComparer.OrdinalIgnoreCase);
+    }
 }

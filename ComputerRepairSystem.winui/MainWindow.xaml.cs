@@ -31,7 +31,6 @@ public sealed partial class MainWindow : Window
 
         ShowLogin();
 
-
         ExtendsContentIntoTitleBar = true;
 
         SetTitleBar(AppTitleBar);
@@ -64,7 +63,6 @@ public sealed partial class MainWindow : Window
     public void ShowApplication()
     {
         UpdateUserHeader();
-
 
         // ==========================================
         // HIDE EVERYTHING FIRST
@@ -141,16 +139,13 @@ public sealed partial class MainWindow : Window
             SubscriptionManagementItem.Visibility =
                 Visibility.Visible;
 
-
             CompanyManagementItem.IsSelected =
                 true;
-
 
             NavFrame.Content =
                 App.Services
                     .GetRequiredService<
                         CompanyManagementPage>();
-
 
             return;
         }
@@ -207,19 +202,14 @@ public sealed partial class MainWindow : Window
             PurchaseManagementItem.Visibility =
                 Visibility.Visible;
 
-
             HomeItem.IsSelected =
                 true;
-
 
             NavFrame.Content =
                 App.Services
                     .GetRequiredService<HomePage>();
 
-
-            // Apply subscription restrictions
             _ = ApplySubscriptionAccessAsync();
-
 
             return;
         }
@@ -237,19 +227,15 @@ public sealed partial class MainWindow : Window
             InventoryItem.Visibility =
                 Visibility.Visible;
 
-
             RepairManagementItem.IsSelected =
                 true;
-
 
             NavFrame.Content =
                 App.Services
                     .GetRequiredService<
                         RepairManagementPage>();
 
-
             _ = ApplySubscriptionAccessAsync();
-
 
             return;
         }
@@ -270,18 +256,72 @@ public sealed partial class MainWindow : Window
             CustomerManagementItem.Visibility =
                 Visibility.Visible;
 
-
             ServiceManagementItem.IsSelected =
                 true;
-
 
             NavFrame.Content =
                 App.Services
                     .GetRequiredService<
                         ServiceManagementPage>();
 
+            _ = ApplySubscriptionAccessAsync();
+
+            return;
+        }
+
+
+        // ==========================================
+        // HR STAFF
+        // ==========================================
+
+        if (role == "HR Staff")
+        {
+            EmployeeManagementItem.Visibility =
+                Visibility.Visible;
+
+            AttendanceManagementItem.Visibility =
+                Visibility.Visible;
+
+            PayrollManagementItem.Visibility =
+                Visibility.Visible;
+
+            EmployeeManagementItem.IsSelected =
+                true;
+
+            NavFrame.Content =
+                App.Services
+                    .GetRequiredService<
+                        EmployeeManagementPage>();
 
             _ = ApplySubscriptionAccessAsync();
+
+            return;
+        }
+
+
+        // ==========================================
+        // FINANCE STAFF
+        // ==========================================
+
+        if (role == "Finance Staff")
+        {
+            BillingItem.Visibility =
+                Visibility.Visible;
+
+            FinanceManagementItem.Visibility =
+                Visibility.Visible;
+
+            FinanceManagementItem.IsSelected =
+                true;
+
+            NavFrame.Content =
+                App.Services
+                    .GetRequiredService<
+                        FinanceManagementPage>();
+
+            _ = ApplySubscriptionAccessAsync();
+
+            return;
         }
     }
 
@@ -299,133 +339,235 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-
         var modules =
             await _subscriptionAccessService
                 .GetAccessibleModuleCodesAsync();
 
 
         // ==========================================
-        // DASHBOARD
+        // ADMIN
         // ==========================================
 
-        HomeItem.Visibility =
-            modules.Contains("DASHBOARD")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // SERVICE MANAGEMENT
-        // ==========================================
-
-        ServiceManagementItem.Visibility =
-            modules.Contains("CUSTOMER")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // CUSTOMER MANAGEMENT
-        // ==========================================
-
-        CustomerManagementItem.Visibility =
-            modules.Contains("CUSTOMER")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // REPAIR MANAGEMENT
-        // ==========================================
-
-        RepairManagementItem.Visibility =
-            modules.Contains("REPAIR")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // BILLING
-        // ==========================================
-
-        BillingItem.Visibility =
-            modules.Contains("FINANCE")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // INVENTORY
-        // ==========================================
-
-        InventoryItem.Visibility =
-            modules.Contains("INVENTORY")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // EMPLOYEE
-        // ==========================================
-
-        EmployeeManagementItem.Visibility =
-            modules.Contains("EMPLOYEE")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // ATTENDANCE
-        // ==========================================
-
-        AttendanceManagementItem.Visibility =
-            modules.Contains("ATTENDANCE")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // PAYROLL
-        // ==========================================
-
-        PayrollManagementItem.Visibility =
-            modules.Contains("PAYROLL")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // FINANCE
-        // ==========================================
-
-        FinanceManagementItem.Visibility =
-            modules.Contains("FINANCE")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // SUPPLIER
-        // ==========================================
-
-        SupplierManagementItem.Visibility =
-            modules.Contains("SUPPLIER")
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-
-        // ==========================================
-        // CHECK CURRENT SELECTION
-        // ==========================================
-
-        if (NavView.SelectedItem
-            is NavigationViewItem selectedItem
-            && selectedItem.Visibility ==
-                Visibility.Collapsed)
+        if (CurrentUser.Role == "Admin")
         {
-            NavigateToFirstAvailableModule(
-                modules);
+            // DASHBOARD
+            HomeItem.Visibility =
+                modules.Contains("DASHBOARD")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // SERVICE MANAGEMENT
+            ServiceManagementItem.Visibility =
+                modules.Contains("CUSTOMER")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // CUSTOMER MANAGEMENT
+            CustomerManagementItem.Visibility =
+                modules.Contains("CUSTOMER")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // REPAIR MANAGEMENT
+            RepairManagementItem.Visibility =
+                modules.Contains("REPAIR")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // BILLING
+            BillingItem.Visibility =
+                modules.Contains("FINANCE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // INVENTORY
+            InventoryItem.Visibility =
+                modules.Contains("INVENTORY")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // EMPLOYEE
+            EmployeeManagementItem.Visibility =
+                modules.Contains("EMPLOYEE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // ATTENDANCE
+            AttendanceManagementItem.Visibility =
+                modules.Contains("ATTENDANCE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // PAYROLL
+            PayrollManagementItem.Visibility =
+                modules.Contains("PAYROLL")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // FINANCE
+            FinanceManagementItem.Visibility =
+                modules.Contains("FINANCE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // SUPPLIER
+            SupplierManagementItem.Visibility =
+                modules.Contains("SUPPLIER")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // PURCHASE
+            PurchaseManagementItem.Visibility =
+                modules.Contains("INVENTORY")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // ADMIN-ONLY ITEMS
+            UserManagementItem.Visibility =
+                Visibility.Visible;
+
+            SystemSettingsItem.Visibility =
+                Visibility.Visible;
+
+            TermsAndConditionItem.Visibility =
+                Visibility.Visible;
+
+            if (NavView.SelectedItem
+                is NavigationViewItem selectedAdminItem
+                && selectedAdminItem.Visibility ==
+                    Visibility.Collapsed)
+            {
+                NavigateToFirstAvailableModule(
+                    modules);
+            }
+
+            return;
+        }
+
+
+        // ==========================================
+        // TECHNICIAN
+        // ==========================================
+
+        if (CurrentUser.Role == "Technician")
+        {
+            RepairManagementItem.Visibility =
+                modules.Contains("REPAIR")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            InventoryItem.Visibility =
+                modules.Contains("INVENTORY")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            if (NavView.SelectedItem
+                is NavigationViewItem selectedTechnicianItem
+                && selectedTechnicianItem.Visibility ==
+                    Visibility.Collapsed)
+            {
+                NavigateToFirstAvailableModule(
+                    modules);
+            }
+
+            return;
+        }
+
+
+        // ==========================================
+        // RECEPTIONIST
+        // ==========================================
+
+        if (CurrentUser.Role == "Receptionist")
+        {
+            ServiceManagementItem.Visibility =
+                modules.Contains("CUSTOMER")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            BillingItem.Visibility =
+                modules.Contains("FINANCE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            CustomerManagementItem.Visibility =
+                modules.Contains("CUSTOMER")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            if (NavView.SelectedItem
+                is NavigationViewItem selectedReceptionistItem
+                && selectedReceptionistItem.Visibility ==
+                    Visibility.Collapsed)
+            {
+                NavigateToFirstAvailableModule(
+                    modules);
+            }
+
+            return;
+        }
+
+
+        // ==========================================
+        // HR STAFF
+        // ==========================================
+
+        if (CurrentUser.Role == "HR Staff")
+        {
+            EmployeeManagementItem.Visibility =
+                modules.Contains("EMPLOYEE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            AttendanceManagementItem.Visibility =
+                modules.Contains("ATTENDANCE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            PayrollManagementItem.Visibility =
+                modules.Contains("PAYROLL")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            if (NavView.SelectedItem
+                is NavigationViewItem selectedHrItem
+                && selectedHrItem.Visibility ==
+                    Visibility.Collapsed)
+            {
+                NavigateToFirstAvailableModule(
+                    modules);
+            }
+
+            return;
+        }
+
+
+        // ==========================================
+        // FINANCE STAFF
+        // ==========================================
+
+        if (CurrentUser.Role == "Finance Staff")
+        {
+            BillingItem.Visibility =
+                modules.Contains("FINANCE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            FinanceManagementItem.Visibility =
+                modules.Contains("FINANCE")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            if (NavView.SelectedItem
+                is NavigationViewItem selectedFinanceItem
+                && selectedFinanceItem.Visibility ==
+                    Visibility.Collapsed)
+            {
+                NavigateToFirstAvailableModule(
+                    modules);
+            }
+
+            return;
         }
     }
 
@@ -437,12 +579,67 @@ public sealed partial class MainWindow : Window
     private void NavigateToFirstAvailableModule(
         HashSet<string> modules)
     {
+        // ==========================================
+        // HR STAFF
+        // ==========================================
+
+        if (CurrentUser.Role == "HR Staff")
+        {
+            if (modules.Contains("EMPLOYEE"))
+            {
+                EmployeeManagementItem.IsSelected =
+                    true;
+
+                return;
+            }
+
+            if (modules.Contains("ATTENDANCE"))
+            {
+                AttendanceManagementItem.IsSelected =
+                    true;
+
+                return;
+            }
+
+            if (modules.Contains("PAYROLL"))
+            {
+                PayrollManagementItem.IsSelected =
+                    true;
+
+                return;
+            }
+
+            return;
+        }
+
+
+        // ==========================================
+        // FINANCE STAFF
+        // ==========================================
+
+        if (CurrentUser.Role == "Finance Staff")
+        {
+            if (modules.Contains("FINANCE"))
+            {
+                FinanceManagementItem.IsSelected =
+                    true;
+
+                return;
+            }
+
+            return;
+        }
+
+
+        // ==========================================
+        // OTHER ROLES
+        // ==========================================
+
         if (modules.Contains("DASHBOARD"))
         {
             HomeItem.IsSelected = true;
             return;
         }
-
 
         if (modules.Contains("CUSTOMER"))
         {
@@ -452,7 +649,6 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-
         if (modules.Contains("REPAIR"))
         {
             RepairManagementItem.IsSelected =
@@ -460,7 +656,6 @@ public sealed partial class MainWindow : Window
 
             return;
         }
-
 
         if (modules.Contains("FINANCE"))
         {
@@ -470,7 +665,6 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-
         if (modules.Contains("INVENTORY"))
         {
             InventoryItem.IsSelected =
@@ -478,7 +672,6 @@ public sealed partial class MainWindow : Window
 
             return;
         }
-
 
         if (modules.Contains("EMPLOYEE"))
         {
@@ -549,7 +742,6 @@ public sealed partial class MainWindow : Window
 
         HomeItem.IsSelected = false;
 
-
         NavFrame.Content =
             App.Services
                 .GetRequiredService<LoginPage>();
@@ -568,7 +760,6 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
-
 
         if (args.SelectedItem
             is NavigationViewItem item)
@@ -748,7 +939,6 @@ public sealed partial class MainWindow : Window
                 Content.XamlRoot
         };
 
-
         await dialog.ShowAsync();
     }
 
@@ -779,7 +969,6 @@ public sealed partial class MainWindow : Window
             XamlRoot =
                 Content.XamlRoot
         };
-
 
         await dialog.ShowAsync();
     }
@@ -827,10 +1016,8 @@ public sealed partial class MainWindow : Window
                 Content.XamlRoot
         };
 
-
         var result =
             await dialog.ShowAsync();
-
 
         if (result ==
             ContentDialogResult.Primary)
@@ -990,6 +1177,7 @@ public sealed partial class MainWindow : Window
 
         NavFrame.Content = page;
     }
+
 
     // ==========================================
     // PURCHASE MANAGEMENT

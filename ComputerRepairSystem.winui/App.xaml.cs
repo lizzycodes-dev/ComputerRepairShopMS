@@ -217,7 +217,9 @@ public partial class App : Application
             "Super Admin",
             "Admin",
             "Technician",
-            "Receptionist"
+            "Receptionist",
+            "HR Staff",
+            "Finance Staff"
         };
 
         foreach (var role in roles)

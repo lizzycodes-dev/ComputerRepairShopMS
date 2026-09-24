@@ -127,12 +127,43 @@ public static class MasterDbSeeder
                     ModuleName = "Finance Management",
                     Description = "Manage payments, invoices, and expenses.",
                     DisplayOrder = 10
+                },
+
+                new ModuleDefinition
+                {
+                    ModuleCode = "HR",
+                    ModuleName = "Human Resources",
+                    Description = "Manage employees, attendance, and payroll.",
+                    DisplayOrder = 11
                 }
             };
 
             context.ModuleDefinitions.AddRange(modules);
 
             await context.SaveChangesAsync();
+
+            // ============================
+            // ENSURE HR MODULE EXISTS
+            // ============================
+
+            var hrModuleExists =
+                await context.ModuleDefinitions
+                    .AnyAsync(x => x.ModuleCode == "HR");
+
+            if (!hrModuleExists)
+            {
+                context.ModuleDefinitions.Add(
+                    new ModuleDefinition
+                    {
+                        ModuleCode = "HR",
+                        ModuleName = "Human Resources",
+                        Description =
+                            "Manage employees, attendance, and payroll.",
+                        DisplayOrder = 11
+                    });
+
+                await context.SaveChangesAsync();
+            }
         }
 
 

@@ -16,17 +16,21 @@ public sealed partial class UserManagementPage : Page
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly MasterErpDbContext _masterDb;
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly SubscriptionAccessService
+        _subscriptionAccessService;
 
     public UserManagementPage(
         UserManager<ApplicationUser> userManager,
         MasterErpDbContext masterDb,
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        SubscriptionAccessService subscriptionAccessService)
     {
         InitializeComponent();
 
         _userManager = userManager;
         _masterDb = masterDb;
         _tenantDbFactory = tenantDbFactory;
+        _subscriptionAccessService = subscriptionAccessService;
 
         Loaded += UserManagementPage_Loaded;
     }
@@ -189,19 +193,18 @@ public sealed partial class UserManagementPage : Page
                 PlaceholderText = "Select a role"
             };
 
-            roleBox.Items.Add("Super Admin");
+            // Basic roles
             roleBox.Items.Add("Admin");
             roleBox.Items.Add("Technician");
             roleBox.Items.Add("Receptionist");
 
-
-
-            if (CurrentUser.Role == "Admin")
+            // Super Admin can create another Super Admin
+            if (CurrentUser.Role == "Super Admin")
             {
-                roleBox.Items.Remove("Super Admin");
+                roleBox.Items.Insert(0, "Super Admin");
             }
 
-            roleBox.SelectedIndex = 1;
+            roleBox.SelectedIndex = 0;
 
 
             // ==========================================
@@ -244,26 +247,24 @@ public sealed partial class UserManagementPage : Page
                 PlaceholderText = "Enter job position"
             };
 
+
+
             roleBox.SelectionChanged += (_, _) =>
             {
-                switch (roleBox.SelectedItem?.ToString())
-                {
-                    case "Admin":
-                        positionBox.Text = "Administrator";
-                        break;
+                if (roleBox.SelectedItem is not string selectedRole)
+                    return;
 
-                    case "Technician":
-                        positionBox.Text = "Computer Technician";
-                        break;
-
-                    case "Receptionist":
-                        positionBox.Text = "Receptionist";
-                        break;
-
-                    case "Super Admin":
-                        positionBox.Text = string.Empty;
-                        break;
-                }
+                positionBox.Text =
+                    selectedRole switch
+                    {
+                        "Admin" => "Administrator",
+                        "Technician" => "Computer Technician",
+                        "Receptionist" => "Receptionist",
+                        "HR Staff" => "HR Staff",
+                        "Finance Staff" => "Finance Staff",
+                        "Super Admin" => "",
+                        _ => ""
+                    };
             };
 
             var hireDatePicker = new DatePicker
@@ -315,6 +316,69 @@ public sealed partial class UserManagementPage : Page
                     companyBox.SelectedIndex = 0;
                 }
             }
+
+            // ==========================================
+            // LOAD SUBSCRIPTION-BASED ROLES
+            // ==========================================
+
+            if (companyBox.SelectedItem is Company selectedCompany)
+            {
+                var accessibleModules =
+                    await _subscriptionAccessService
+                        .GetAccessibleModuleCodesAsync(
+                            selectedCompany.CompanyId);
+                if (accessibleModules.Contains("EMPLOYEE") &&
+                    accessibleModules.Contains("ATTENDANCE") &&
+                    accessibleModules.Contains("PAYROLL"))
+                {
+                    roleBox.Items.Add("HR Staff");
+                }
+
+                if (accessibleModules.Contains("FINANCE"))
+                {
+                    roleBox.Items.Add("Finance Staff");
+                }
+            }
+
+            // ==========================================
+            // REFRESH ROLES WHEN COMPANY CHANGES
+            // ==========================================
+
+            companyBox.SelectionChanged += async (_, _) =>
+            {
+                if (companyBox.SelectedItem is not Company selectedCompany)
+                    return;
+
+                roleBox.Items.Clear();
+
+                if (CurrentUser.Role == "Super Admin")
+                {
+                    roleBox.Items.Add("Super Admin");
+                }
+
+                roleBox.Items.Add("Admin");
+                roleBox.Items.Add("Technician");
+                roleBox.Items.Add("Receptionist");
+
+                var accessibleModules =
+                    await _subscriptionAccessService
+                        .GetAccessibleModuleCodesAsync(
+                            selectedCompany.CompanyId);
+
+                if (accessibleModules.Contains("EMPLOYEE") &&
+                    accessibleModules.Contains("ATTENDANCE") &&
+                    accessibleModules.Contains("PAYROLL"))
+                {
+                    roleBox.Items.Add("HR Staff");
+                }
+
+                if (accessibleModules.Contains("FINANCE"))
+                {
+                    roleBox.Items.Add("Finance Staff");
+                }
+
+                roleBox.SelectedIndex = 0;
+            };
 
 
             // ==========================================
@@ -518,7 +582,7 @@ public sealed partial class UserManagementPage : Page
             }
             else
             {
-                if (companyBox.SelectedItem is not Company selectedCompany)
+                if (companyBox.SelectedItem is not Company subscriptionCompany)
                 {
                     await ShowMessageAsync(
                         "Validation Error",
@@ -528,7 +592,50 @@ public sealed partial class UserManagementPage : Page
                 }
 
                 companyId =
-                    selectedCompany.CompanyId;
+                    subscriptionCompany.CompanyId;
+            }
+            // ==========================================
+            // CHECK SUBSCRIPTION FOR SPECIALIZED ROLES
+            // ==========================================
+
+            if (selectedRole == "HR Staff" ||
+                selectedRole == "Finance Staff")
+            {
+                if (companyId is not int selectedCompanyId)
+                {
+                    await ShowMessageAsync(
+                        "Validation Error",
+                        "A company is required for this role.");
+
+                    return;
+                }
+
+                var accessibleModules =
+                    await _subscriptionAccessService
+                        .GetAccessibleModuleCodesAsync(
+                            selectedCompanyId);
+
+                if (selectedRole == "HR Staff" &&
+                    (!accessibleModules.Contains("EMPLOYEE") ||
+                     !accessibleModules.Contains("ATTENDANCE") ||
+                     !accessibleModules.Contains("PAYROLL")))
+                {
+                    await ShowMessageAsync(
+                        "Modules Not Available",
+                        "The selected company does not have all required HR modules.");
+
+                    return;
+                }
+
+                if (selectedRole == "Finance Staff" &&
+                    !accessibleModules.Contains("FINANCE"))
+                {
+                    await ShowMessageAsync(
+                        "Module Not Available",
+                        "The selected company does not have the Finance module.");
+
+                    return;
+                }
             }
 
 
@@ -781,7 +888,6 @@ public sealed partial class UserManagementPage : Page
 
         var selectedUser = selectedRow.User;
 
-
         try
         {
             // ==========================================
@@ -791,7 +897,6 @@ public sealed partial class UserManagementPage : Page
             var user =
                 await _userManager.FindByIdAsync(
                     selectedUser.Id);
-
 
             if (user == null)
             {
@@ -810,6 +915,9 @@ public sealed partial class UserManagementPage : Page
             var currentRole =
                 currentRoles.FirstOrDefault();
 
+            // ==========================================
+            // ADMIN ACCESS CHECK
+            // ==========================================
 
             if (CurrentUser.Role == "Admin" &&
                 user.CompanyId != CurrentUser.CompanyId)
@@ -820,6 +928,7 @@ public sealed partial class UserManagementPage : Page
 
                 return;
             }
+
             var isSuperAdmin =
                 await _userManager.IsInRoleAsync(
                     user,
@@ -834,7 +943,6 @@ public sealed partial class UserManagementPage : Page
 
                 return;
             }
-
 
             // ==========================================
             // INPUT FIELDS
@@ -853,23 +961,12 @@ public sealed partial class UserManagementPage : Page
                 Text = user.Email ?? string.Empty,
                 PlaceholderText = "Enter email"
             };
+
             var roleBox = new ComboBox
             {
                 Header = "Role",
                 PlaceholderText = "Select a role"
             };
-
-            roleBox.Items.Add("Admin");
-            roleBox.Items.Add("Technician");
-            roleBox.Items.Add("Receptionist");
-
-            if (CurrentUser.Role == "Super Admin")
-            {
-                roleBox.Items.Add("Super Admin");
-            }
-
-            roleBox.SelectedItem =
-                currentRole;
 
             var companies =
                 await _masterDb.Companies
@@ -907,12 +1004,89 @@ public sealed partial class UserManagementPage : Page
                 companyBox.SelectedItem = currentCompany;
             }
 
+            // ==========================================
+            // LOAD ROLES FOR SELECTED COMPANY
+            // ==========================================
+
+            async Task LoadRolesForCompanyAsync(
+                Company? selectedCompanyForRoles,
+                string? roleToSelect = null)
+            {
+                roleBox.Items.Clear();
+
+                // Basic roles
+                roleBox.Items.Add("Admin");
+                roleBox.Items.Add("Technician");
+                roleBox.Items.Add("Receptionist");
+
+                // Super Admin can edit/create Super Admin users
+                if (CurrentUser.Role == "Super Admin")
+                {
+                    roleBox.Items.Insert(
+                        0,
+                        "Super Admin");
+                }
+
+                if (selectedCompanyForRoles != null)
+                {
+                    var accessibleModules =
+                        await _subscriptionAccessService
+                            .GetAccessibleModuleCodesAsync(
+                                selectedCompanyForRoles.CompanyId);
+
+                    if (accessibleModules.Contains("EMPLOYEE") &&
+                        accessibleModules.Contains("ATTENDANCE") &&
+                        accessibleModules.Contains("PAYROLL"))
+                    {
+                        roleBox.Items.Add("HR Staff");
+                    }
+
+                    if (accessibleModules.Contains("FINANCE"))
+                    {
+                        roleBox.Items.Add("Finance Staff");
+                    }
+                }
+
+                // Keep the existing role selected
+                // if that role is available.
+                if (!string.IsNullOrWhiteSpace(roleToSelect) &&
+                    roleBox.Items.Contains(roleToSelect))
+                {
+                    roleBox.SelectedItem =
+                        roleToSelect;
+                }
+                else
+                {
+                    roleBox.SelectedIndex = 0;
+                }
+            }
+
+            // Load roles for the initial company
+            await LoadRolesForCompanyAsync(
+                companyBox.SelectedItem as Company,
+                currentRole);
+
+            // ==========================================
+            // REFRESH ROLES WHEN COMPANY CHANGES
+            // ==========================================
+
+            companyBox.SelectionChanged += async (_, _) =>
+            {
+                if (companyBox.SelectedItem
+                    is not Company changedCompany)
+                {
+                    return;
+                }
+
+                await LoadRolesForCompanyAsync(
+                    changedCompany);
+            };
+
             var activeCheckBox = new CheckBox
             {
                 Content = "Active",
                 IsChecked = user.IsActive
             };
-
 
             // ==========================================
             // DIALOG CONTENT
@@ -929,7 +1103,6 @@ public sealed partial class UserManagementPage : Page
             panel.Children.Add(companyBox);
             panel.Children.Add(activeCheckBox);
 
-
             var dialog = new ContentDialog
             {
                 Title = "Edit User",
@@ -944,13 +1117,11 @@ public sealed partial class UserManagementPage : Page
                 XamlRoot = XamlRoot
             };
 
-
             var dialogResult =
                 await dialog.ShowAsync();
 
             if (dialogResult != ContentDialogResult.Primary)
                 return;
-
 
             // ==========================================
             // VALIDATION
@@ -981,7 +1152,8 @@ public sealed partial class UserManagementPage : Page
             }
             else
             {
-                if (companyBox.SelectedItem is not Company company)
+                if (companyBox.SelectedItem
+                    is not Company company)
                 {
                     await ShowMessageAsync(
                         "Validation Error",
@@ -1002,7 +1174,6 @@ public sealed partial class UserManagementPage : Page
                 return;
             }
 
-
             if (string.IsNullOrWhiteSpace(email))
             {
                 await ShowMessageAsync(
@@ -1011,6 +1182,7 @@ public sealed partial class UserManagementPage : Page
 
                 return;
             }
+
             var selectedRole =
                 roleBox.SelectedItem?.ToString();
 
@@ -1023,6 +1195,49 @@ public sealed partial class UserManagementPage : Page
                 return;
             }
 
+            // ==========================================
+            // CHECK SUBSCRIPTION FOR SPECIALIZED ROLES
+            // ==========================================
+
+            if (selectedRole == "HR Staff" ||
+                selectedRole == "Finance Staff")
+            {
+                if (selectedCompany == null)
+                {
+                    await ShowMessageAsync(
+                        "Validation Error",
+                        "A company is required for this role.");
+
+                    return;
+                }
+
+                var accessibleModules =
+                    await _subscriptionAccessService
+                        .GetAccessibleModuleCodesAsync(
+                            selectedCompany.CompanyId);
+
+                if (selectedRole == "HR Staff" &&
+                    (!accessibleModules.Contains("EMPLOYEE") ||
+                     !accessibleModules.Contains("ATTENDANCE") ||
+                     !accessibleModules.Contains("PAYROLL")))
+                {
+                    await ShowMessageAsync(
+                        "Modules Not Available",
+                        "The selected company does not have all required HR modules.");
+
+                    return;
+                }
+
+                if (selectedRole == "Finance Staff" &&
+                    !accessibleModules.Contains("FINANCE"))
+                {
+                    await ShowMessageAsync(
+                        "Module Not Available",
+                        "The selected company does not have the Finance module.");
+
+                    return;
+                }
+            }
 
             // ==========================================
             // CHECK DUPLICATE USERNAME
@@ -1041,7 +1256,6 @@ public sealed partial class UserManagementPage : Page
 
                 return;
             }
-
 
             // ==========================================
             // CHECK DUPLICATE EMAIL
@@ -1065,23 +1279,30 @@ public sealed partial class UserManagementPage : Page
             // UPDATE ROLE
             // ==========================================
 
-            if (!string.IsNullOrWhiteSpace(currentRole) &&
-                currentRole != selectedRole)
+            if (!string.Equals(
+                    currentRole,
+                    selectedRole,
+                    StringComparison.OrdinalIgnoreCase))
             {
-                var removeRoleResult =
-                    await _userManager.RemoveFromRoleAsync(
-                        user,
-                        currentRole);
-
-                if (!removeRoleResult.Succeeded)
+                // Remove previous role
+                if (!string.IsNullOrWhiteSpace(currentRole))
                 {
-                    await ShowIdentityErrorsAsync(
-                        "Unable to Remove Previous Role",
-                        removeRoleResult);
+                    var removeRoleResult =
+                        await _userManager.RemoveFromRoleAsync(
+                            user,
+                            currentRole);
 
-                    return;
+                    if (!removeRoleResult.Succeeded)
+                    {
+                        await ShowIdentityErrorsAsync(
+                            "Unable to Remove Previous Role",
+                            removeRoleResult);
+
+                        return;
+                    }
                 }
 
+                // Add new role
                 var addRoleResult =
                     await _userManager.AddToRoleAsync(
                         user,
@@ -1094,9 +1315,12 @@ public sealed partial class UserManagementPage : Page
                         addRoleResult);
 
                     // Restore previous role
-                    await _userManager.AddToRoleAsync(
-                        user,
-                        currentRole);
+                    if (!string.IsNullOrWhiteSpace(currentRole))
+                    {
+                        await _userManager.AddToRoleAsync(
+                            user,
+                            currentRole);
+                    }
 
                     return;
                 }
@@ -1126,7 +1350,6 @@ public sealed partial class UserManagementPage : Page
                 }
             }
 
-
             // ==========================================
             // UPDATE EMAIL
             // ==========================================
@@ -1151,7 +1374,6 @@ public sealed partial class UserManagementPage : Page
                 }
             }
 
-
             // ==========================================
             // UPDATE CUSTOM FIELDS
             // ==========================================
@@ -1162,14 +1384,12 @@ public sealed partial class UserManagementPage : Page
             user.IsActive =
                 activeCheckBox.IsChecked == true;
 
-
             // ==========================================
             // SAVE CHANGES
             // ==========================================
 
             var updateResult =
                 await _userManager.UpdateAsync(user);
-
 
             if (!updateResult.Succeeded)
             {
@@ -1180,13 +1400,11 @@ public sealed partial class UserManagementPage : Page
                 return;
             }
 
-
             // ==========================================
             // REFRESH LIST
             // ==========================================
 
             await LoadUsersAsync();
-
 
             await ShowMessageAsync(
                 "User Updated",
@@ -1198,7 +1416,6 @@ public sealed partial class UserManagementPage : Page
                 "Edit User Error",
                 ex.ToString());
         }
-
     }
 
     // ==========================================
