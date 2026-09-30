@@ -146,6 +146,9 @@ namespace ComputerRepairSystem.infrastructure.Migrations
                     b.Property<int>("SubscriptionPlanId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SubscriptionPlanId1")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("TrialEndsAt")
                         .HasColumnType("datetime2");
 
@@ -154,6 +157,8 @@ namespace ComputerRepairSystem.infrastructure.Migrations
                     b.HasIndex("CompanyId");
 
                     b.HasIndex("SubscriptionPlanId");
+
+                    b.HasIndex("SubscriptionPlanId1");
 
                     b.ToTable("Subscriptions");
                 });
@@ -168,6 +173,10 @@ namespace ComputerRepairSystem.infrastructure.Migrations
 
                     b.Property<int>("DurationInDays")
                         .HasColumnType("int");
+
+                    b.Property<string>("EnterpriseType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -200,9 +209,14 @@ namespace ComputerRepairSystem.infrastructure.Migrations
                     b.Property<int>("SubscriptionPlanId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SubscriptionPlanId1")
+                        .HasColumnType("int");
+
                     b.HasKey("SubscriptionPlanModuleId");
 
                     b.HasIndex("ModuleDefinitionId");
+
+                    b.HasIndex("SubscriptionPlanId1");
 
                     b.HasIndex("SubscriptionPlanId", "ModuleDefinitionId")
                         .IsUnique();
@@ -444,6 +458,10 @@ namespace ComputerRepairSystem.infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ComputerRepairSystem.domain.Entities.SubscriptionPlan", null)
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("SubscriptionPlanId1");
+
                     b.Navigation("Company");
 
                     b.Navigation("SubscriptionPlan");
@@ -462,6 +480,10 @@ namespace ComputerRepairSystem.infrastructure.Migrations
                         .HasForeignKey("SubscriptionPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("ComputerRepairSystem.domain.Entities.SubscriptionPlan", null)
+                        .WithMany("SubscriptionPlanModules")
+                        .HasForeignKey("SubscriptionPlanId1");
 
                     b.Navigation("ModuleDefinition");
 
@@ -527,6 +549,13 @@ namespace ComputerRepairSystem.infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ComputerRepairSystem.domain.Entities.SubscriptionPlan", b =>
+                {
+                    b.Navigation("SubscriptionPlanModules");
+
+                    b.Navigation("Subscriptions");
                 });
 #pragma warning restore 612, 618
         }

@@ -6,7 +6,11 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Padding="24">
+    <Grid Padding="32,24">
+
+        <!-- ===================================================== -->
+        <!-- PAGE HEADER -->
+        <!-- ===================================================== -->
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -14,49 +18,46 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-
-        <!-- ========================================== -->
-        <!-- PAGE HEADER -->
-        <!-- ========================================== -->
-
-        <StackPanel Grid.Row="0">
+        <StackPanel
+            Grid.Row="0"
+            Spacing="4">
 
             <TextBlock
-                Text="Subscription Management"
+                Text="Subscription Editor"
                 FontSize="28"
                 FontWeight="SemiBold"/>
 
             <TextBlock
-                Text="Manage subscription plans, included modules, and company subscriptions."
-                Margin="0,6,0,0"
+                Text="Configure subscription plans, module access, and company subscriptions."
+                FontSize="14"
                 Opacity="0.7"/>
 
         </StackPanel>
 
 
-        <!-- ========================================== -->
+        <!-- ===================================================== -->
         <!-- MAIN CONTENT -->
-        <!-- ========================================== -->
+        <!-- ===================================================== -->
 
         <Grid Grid.Row="2">
 
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="380"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
 
-            <!-- ====================================== -->
-            <!-- LEFT: SUBSCRIPTION PLANS -->
-            <!-- ====================================== -->
+            <!-- ================================================= -->
+            <!-- LEFT COLUMN - SUBSCRIPTION PLANS -->
+            <!-- ================================================= -->
 
             <Border
                 Grid.Column="0"
-                Padding="20"
-                Margin="0,0,12,0"
-                CornerRadius="12"
+                BorderBrush="#666666"
                 BorderThickness="1"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                CornerRadius="8"
+                Padding="20">
 
                 <Grid>
 
@@ -76,62 +77,158 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock
+                        <StackPanel
                             Grid.Column="0"
-                            Text="Subscription Plans"
-                            FontSize="20"
-                            FontWeight="SemiBold"/>
+                            Spacing="2">
+
+                            <TextBlock
+                                Text="Subscription Plans"
+                                FontSize="20"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Text="Select a plan to edit its features."
+                                FontSize="12"
+                                Opacity="0.65"/>
+
+                        </StackPanel>
 
                         <Button
                             Grid.Column="1"
-                            Content="Add Plan"
-                            Click="AddPlanButton_Click"/>
+                            Click="AddPlanButton_Click">
+
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="8">
+
+                                <FontIcon
+                                    Glyph="&#xE710;"
+                                    FontSize="12"/>
+
+                                <TextBlock
+                                    Text="Add Plan"/>
+
+                            </StackPanel>
+
+                        </Button>
 
                     </Grid>
 
 
-                    <!-- PLANS -->
+                    <!-- PLAN LIST -->
 
                     <ListView
                         x:Name="PlansListView"
                         Grid.Row="2"
                         SelectionMode="Single"
-                        SelectionChanged="PlansListView_SelectionChanged">
+                        SelectionChanged="PlansListView_SelectionChanged"
+                        BorderThickness="0">
+
+                        <ListView.ItemContainerStyle>
+
+                            <Style TargetType="ListViewItem">
+
+                                <Setter
+                                    Property="Margin"
+                                    Value="0,0,0,8"/>
+
+                                <Setter
+                                    Property="Padding"
+                                    Value="0"/>
+
+                                <Setter
+                                    Property="HorizontalContentAlignment"
+                                    Value="Stretch"/>
+
+                            </Style>
+
+                        </ListView.ItemContainerStyle>
+
 
                         <ListView.ItemTemplate>
 
                             <DataTemplate>
 
-                                <Grid Padding="8">
+                                <Border
+                                    BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="14,12">
 
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                                    <Grid>
 
-
-                                    <StackPanel>
-
-                                        <TextBlock
-                                            Text="{Binding PlanName}"
-                                            FontWeight="SemiBold"
-                                            FontSize="16"/>
-
-                                        <TextBlock
-                                            Text="{Binding DurationInDays}"
-                                            Opacity="0.7"
-                                            Margin="0,4,0,0"/>
-
-                                    </StackPanel>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
 
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        Text="{Binding Price}"
-                                        FontWeight="SemiBold"
-                                        VerticalAlignment="Center"/>
+                                        <!-- PLAN INFORMATION -->
 
-                                </Grid>
+                                        <StackPanel
+                                            Grid.Column="0"
+                                            Spacing="3">
+
+                                            <TextBlock
+                                                Text="{Binding PlanName}"
+                                                FontSize="16"
+                                                FontWeight="SemiBold"/>
+
+                                            <StackPanel
+                                                Orientation="Horizontal"
+                                                Spacing="6">
+
+                                                <TextBlock
+                                                    Text="{Binding EnterpriseType}"
+                                                    FontSize="12"
+                                                    Opacity="0.7"/>
+
+                                                <TextBlock
+                                                    Text="•"
+                                                    FontSize="12"
+                                                    Opacity="0.5"/>
+
+                                                <TextBlock
+                                                    Text="{Binding DurationText}"
+                                                    FontSize="12"
+                                                    Opacity="0.7"/>
+
+                                            </StackPanel>
+
+                                        </StackPanel>
+
+
+                                        <!-- PLAN ACTIONS -->
+
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            Spacing="8"
+                                            VerticalAlignment="Center">
+
+                                            <TextBlock
+                                                Text="{Binding PriceText}"
+                                                FontSize="14"
+                                                FontWeight="SemiBold"
+                                                VerticalAlignment="Center"/>
+
+                                            <Button
+                                                Padding="6"
+                                                Tag="{Binding}"
+                                                Click="EditPlanButton_Click"
+                                                ToolTipService.ToolTip="Edit Plan">
+
+                                                <FontIcon
+                                                    Glyph="&#xE70F;"
+                                                    FontSize="14"/>
+
+                                            </Button>
+
+                                        </StackPanel>
+
+                                    </Grid>
+
+                                </Border>
 
                             </DataTemplate>
 
@@ -144,61 +241,105 @@
             </Border>
 
 
-            <!-- ====================================== -->
-            <!-- RIGHT SIDE -->
-            <!-- ====================================== -->
+            <!-- ================================================= -->
+            <!-- RIGHT COLUMN -->
+            <!-- ================================================= -->
 
             <Grid
-                Grid.Column="1"
-                Margin="12,0,0,0">
+                Grid.Column="2">
 
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="1.2*"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="16"/>
-                    <RowDefinition Height="1.8*"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
 
-                <!-- ================================== -->
+                <!-- ================================================= -->
                 <!-- INCLUDED MODULES -->
-                <!-- ================================== -->
+                <!-- ================================================= -->
 
                 <Border
                     Grid.Row="0"
-                    Padding="20"
-                    CornerRadius="12"
+                    BorderBrush="#666666"
                     BorderThickness="1"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                    CornerRadius="8"
+                    Padding="20">
 
                     <Grid>
 
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
 
-                        <TextBlock
-                            Grid.Row="0"
-                            Text="Included Modules"
-                            FontSize="20"
-                            FontWeight="SemiBold"/>
+                        <!-- HEADER -->
 
+                        <StackPanel
+                            Grid.Row="0"
+                            Spacing="2">
+
+                            <TextBlock
+                                Text="Included Feature Modules"
+                                FontSize="20"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Text="Select the modules available for this subscription plan."
+                                FontSize="12"
+                                Opacity="0.65"/>
+
+                        </StackPanel>
+
+
+                        <!-- MODULE LIST -->
 
                         <ListView
                             x:Name="ModulesListView"
-                            Grid.Row="1"
-                            Margin="0,12,0,0">
+                            Grid.Row="2"
+                            MaxHeight="220"
+                            SelectionMode="None"
+                            BorderThickness="0">
+
+                            <ListView.ItemContainerStyle>
+
+                                <Style TargetType="ListViewItem">
+
+                                    <Setter
+                                        Property="Padding"
+                                        Value="0"/>
+
+                                    <Setter
+                                        Property="MinHeight"
+                                        Value="36"/>
+
+                                    <Setter
+                                        Property="HorizontalContentAlignment"
+                                        Value="Stretch"/>
+
+                                </Style>
+
+                            </ListView.ItemContainerStyle>
+
 
                             <ListView.ItemTemplate>
 
                                 <DataTemplate>
 
-                                    <CheckBox
-                                        Content="{Binding ModuleName}"
-                                        IsChecked="{Binding IsIncluded, Mode=TwoWay}"
-                                        Margin="0,4"/>
+                                    <Border
+                                        Padding="4,4"
+                                        BorderBrush="#555555"
+                                        BorderThickness="0,0,0,1">
+
+                                        <CheckBox
+                                            Content="{Binding ModuleName}"
+                                            IsChecked="{Binding IsIncluded, Mode=TwoWay}"/>
+
+                                    </Border>
 
                                 </DataTemplate>
 
@@ -207,11 +348,12 @@
                         </ListView>
 
 
+                        <!-- SAVE -->
+
                         <Button
-                            Grid.Row="2"
-                            Content="Save Modules"
+                            Grid.Row="4"
+                            Content="Save Module Configuration"
                             HorizontalAlignment="Right"
-                            Margin="0,12,0,0"
                             Click="SaveModulesButton_Click"/>
 
                     </Grid>
@@ -219,20 +361,22 @@
                 </Border>
 
 
-                <!-- ================================== -->
+                <!-- ================================================= -->
                 <!-- COMPANY SUBSCRIPTIONS -->
-                <!-- ================================== -->
+                <!-- ================================================= -->
 
                 <Border
                     Grid.Row="2"
-                    Padding="20"
-                    CornerRadius="12"
+                    BorderBrush="#666666"
                     BorderThickness="1"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                    CornerRadius="8"
+                    Padding="20">
 
                     <Grid>
 
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
@@ -247,81 +391,276 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock
+                            <StackPanel
                                 Grid.Column="0"
-                                Text="Company Subscriptions"
-                                FontSize="20"
-                                FontWeight="SemiBold"/>
+                                Spacing="2">
+
+                                <TextBlock
+                                    Text="Active Company Subscriptions"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Text="Overview of companies and their current subscription plans."
+                                    FontSize="12"
+                                    Opacity="0.65"/>
+
+                            </StackPanel>
+
 
                             <Button
                                 Grid.Column="1"
-                                Content="Add Subscription"
-                                Click="AddSubscriptionButton_Click"/>
+                                Click="AddSubscriptionButton_Click">
+
+                                <StackPanel
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+
+                                    <FontIcon
+                                        Glyph="&#xE710;"
+                                        FontSize="12"/>
+
+                                    <TextBlock
+                                        Text="Assign Subscription"/>
+
+                                </StackPanel>
+
+                            </Button>
 
                         </Grid>
 
 
-                        <!-- SUBSCRIPTIONS -->
+                        <!-- TABLE HEADER -->
+
+                        <Border
+                            Grid.Row="2"
+                            Padding="16,8"
+                            BorderBrush="#555555"
+                            BorderThickness="1"
+                            CornerRadius="4">
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1.2*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+
+                                <TextBlock
+                                    Grid.Column="0"
+                                    Text="Company &amp; Plan"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="Price"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="Status"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="Start Date"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Grid.Column="4"
+                                    Text="End Date"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Grid.Column="5"
+                                    Text="Actions"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Width="120"
+                                    TextAlignment="Right"/>
+
+                            </Grid>
+
+                        </Border>
+
+
+                        <!-- SUBSCRIPTIONS LIST -->
 
                         <ListView
                             x:Name="CompanySubscriptionsListView"
-                            Grid.Row="1"
-                            Margin="0,12,0,0">
+                            Grid.Row="3"
+                            SelectionMode="None"
+                            BorderThickness="0">
+
+                            <ListView.ItemContainerStyle>
+
+                                <Style TargetType="ListViewItem">
+
+                                    <Setter
+                                        Property="Padding"
+                                        Value="0"/>
+
+                                    <Setter
+                                        Property="Margin"
+                                        Value="0,0,0,4"/>
+
+                                    <Setter
+                                        Property="HorizontalContentAlignment"
+                                        Value="Stretch"/>
+
+                                </Style>
+
+                            </ListView.ItemContainerStyle>
+
 
                             <ListView.ItemTemplate>
 
                                 <DataTemplate>
 
-                                    <Grid Padding="8">
+                                    <Border
+                                        BorderBrush="#555555"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="16,10">
 
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="1.5*"/>
-                                            <ColumnDefinition Width="1.2*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="1.2*"/>
-                                        </Grid.ColumnDefinitions>
+                                        <Grid
+                                            VerticalAlignment="Center">
+
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="1*"/>
+                                                <ColumnDefinition Width="1*"/>
+                                                <ColumnDefinition Width="1*"/>
+                                                <ColumnDefinition Width="1.2*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
 
-                                        <!-- COMPANY + PLAN -->
+                                            <!-- COMPANY / PLAN -->
 
-                                        <StackPanel Grid.Column="0">
+                                            <StackPanel
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                Spacing="2">
+
+                                                <TextBlock
+                                                    Text="{Binding CompanyName}"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"/>
+
+                                                <StackPanel
+                                                    Orientation="Horizontal"
+                                                    Spacing="4">
+
+                                                    <TextBlock
+                                                        Text="{Binding PlanName}"
+                                                        FontSize="12"
+                                                        Opacity="0.7"/>
+
+                                                    <TextBlock
+                                                        Text="•"
+                                                        FontSize="12"
+                                                        Opacity="0.5"/>
+
+                                                    <TextBlock
+                                                        Text="{Binding EnterpriseType}"
+                                                        FontSize="12"
+                                                        Opacity="0.7"/>
+
+                                                </StackPanel>
+
+                                            </StackPanel>
+
+
+                                            <!-- PRICE -->
 
                                             <TextBlock
-                                                Text="{Binding CompanyName}"
-                                                FontWeight="SemiBold"/>
+                                                Grid.Column="1"
+                                                Text="{Binding PriceText}"
+                                                FontSize="13"
+                                                VerticalAlignment="Center"/>
+
+
+                                            <!-- STATUS -->
+
+                                            <Border
+                                                Grid.Column="2"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                BorderBrush="#777777"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                Padding="8,2">
+
+                                                <TextBlock
+                                                    Text="{Binding Status}"
+                                                    FontSize="12"
+                                                    FontWeight="SemiBold"/>
+
+                                            </Border>
+
+
+                                            <!-- START DATE -->
 
                                             <TextBlock
-                                                Text="{Binding PlanName}"
+                                                Grid.Column="3"
+                                                Text="{Binding StartDateText}"
+                                                FontSize="12"
                                                 Opacity="0.7"
-                                                Margin="0,3,0,0"/>
-
-                                        </StackPanel>
+                                                VerticalAlignment="Center"/>
 
 
-                                        <!-- STATUS -->
+                                            <!-- END DATE -->
 
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            Text="{Binding Status}"
-                                            VerticalAlignment="Center"/>
-
-
-                                        <!-- START DATE -->
-
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Text="{Binding StartDateText}"
-                                            VerticalAlignment="Center"/>
+                                            <TextBlock
+                                                Grid.Column="4"
+                                                Text="{Binding EndDateText}"
+                                                FontSize="12"
+                                                Opacity="0.7"
+                                                VerticalAlignment="Center"/>
 
 
-                                        <!-- END DATE -->
+                                            <!-- ACTIONS -->
 
-                                        <TextBlock
-                                            Grid.Column="3"
-                                            Text="{Binding EndDateText}"
-                                            VerticalAlignment="Center"/>
+                                            <StackPanel
+                                                Grid.Column="5"
+                                                Orientation="Horizontal"
+                                                Spacing="4"
+                                                HorizontalAlignment="Right">
 
-                                    </Grid>
+                                                <Button
+                                                    Content="Change"
+                                                    Padding="8,4"
+                                                    Tag="{Binding}"
+                                                    Click="ChangeSubscriptionButton_Click"/>
+
+                                                <Button
+                                                    Content="Renew"
+                                                    Padding="8,4"
+                                                    Tag="{Binding}"
+                                                    Click="RenewSubscriptionButton_Click"/>
+
+                                                <Button
+                                                    Content="Cancel"
+                                                    Padding="8,4"
+                                                    Tag="{Binding}"
+                                                    Click="CancelSubscriptionButton_Click"/>
+
+                                            </StackPanel>
+
+                                        </Grid>
+
+                                    </Border>
 
                                 </DataTemplate>
 

@@ -81,6 +81,7 @@
                         <ColumnDefinition Width="2*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
                     <TextBlock
@@ -95,11 +96,16 @@
 
                     <TextBlock
                 Grid.Column="2"
-                Text="Company Name"
+                Text="Role"
                 FontWeight="SemiBold" />
 
                     <TextBlock
                 Grid.Column="3"
+                Text="Company Name"
+                FontWeight="SemiBold" />
+
+                    <TextBlock
+                Grid.Column="4"
                 Text="Status"
                 FontWeight="SemiBold" />
 
@@ -119,6 +125,7 @@
                             <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
 
@@ -135,17 +142,21 @@
                     Grid.Column="1"
                     Text="{Binding Email}" />
 
+                        <!-- Role -->
+                    <TextBlock Grid.Column="2"
+                        Text="{Binding Role}"
+                        VerticalAlignment="Center" />
 
                         <!-- Company -->
                     <TextBlock
-                        Grid.Column="2"
+                        Grid.Column="3"
                         Text="{Binding CompanyName}" />
 
 
                         <!-- Status -->
 
                         <TextBlock
-                    Grid.Column="3"
+                    Grid.Column="4"
                     Text="{Binding IsActive}" />
 
                     </Grid>

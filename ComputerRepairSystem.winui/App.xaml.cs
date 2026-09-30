@@ -13,7 +13,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 
-
 namespace ComputerRepairSystem_winui;
 
 public partial class App : Application
@@ -27,7 +26,6 @@ public partial class App : Application
     {
         InitializeComponent();
 
-
         // ==========================================
         // CONFIGURATION
         // ==========================================
@@ -40,9 +38,7 @@ public partial class App : Application
                 reloadOnChange: true)
             .Build();
 
-
         var services = new ServiceCollection();
-
 
         // ==========================================
         // CONNECTION STRINGS
@@ -53,12 +49,10 @@ public partial class App : Application
             ?? throw new InvalidOperationException(
                 "Connection string 'MasterLocal' was not found.");
 
-
         var tenantConnectionString =
             configuration.GetConnectionString("TenantLocal")
             ?? throw new InvalidOperationException(
                 "Connection string 'TenantLocal' was not found.");
-
 
         // ==========================================
         // MASTER DATABASE
@@ -77,7 +71,6 @@ public partial class App : Application
 
         services.AddSingleton<ICompanyContext, CompanyContext>();
 
-
         // ==========================================
         // ASP.NET IDENTITY
         // ==========================================
@@ -95,7 +88,6 @@ public partial class App : Application
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<MasterErpDbContext>();
 
-
         // ==========================================
         // TENANT DATABASE
         // ==========================================
@@ -105,7 +97,6 @@ public partial class App : Application
                 options.UseSqlServer(
                     tenantConnectionString));
 
-
         // ==========================================
         // CUSTOMER REPOSITORY
         // ==========================================
@@ -114,13 +105,11 @@ public partial class App : Application
             ICustomerRepository,
             CustomerRepository>();
 
-
         // ==========================================
         // SERVICES
         // ==========================================
 
         services.AddTransient<CustomerService>();
-
 
         // ==========================================
         // PAGES
@@ -164,27 +153,37 @@ public partial class App : Application
 
         services.AddTransient<PurchaseManagementPage>();
 
+        services.AddTransient<MySubscriptionPage>();
+
         // ==========================================
         // MAIN WINDOW
         // ==========================================
 
         services.AddSingleton<MainWindow>();
 
-
         Services = services.BuildServiceProvider();
     }
-
 
     protected override async void OnLaunched(
         LaunchActivatedEventArgs args)
     {
-        // Seed Master DB
+        // ==========================================
+        // INITIALIZE MASTER DATABASE
+        // ==========================================
+
         await InitializeMasterDbAsync();
 
-        // Seed admin account / role
+        // ==========================================
+        // INITIALIZE SYSTEM ACCOUNTS
+        // ==========================================
+
         await InitializeAdminAsync();
 
-        /* Seed tenant customers and devices
+        /*
+        // ==========================================
+        // SEED TENANT CUSTOMERS AND DEVICES
+        // ==========================================
+
         using var scope =
             Services.CreateScope();
 
@@ -196,21 +195,31 @@ public partial class App : Application
         await using var db =
             await dbFactory.CreateDbContextAsync();
 
-        await TenantDbSeeder.SeedAsync(db);*/
+        await TenantDbSeeder.SeedAsync(db);
+        */
 
-        // Start application
+        // ==========================================
+        // START APPLICATION
+        // ==========================================
+
         _window =
             Services.GetRequiredService<MainWindow>();
 
         _window.Activate();
     }
+
     private async Task InitializeAdminAsync()
     {
-
         using var scope = Services.CreateScope();
+
         var roleManager =
             scope.ServiceProvider
-                .GetRequiredService<RoleManager<IdentityRole>>();
+                .GetRequiredService<
+                    RoleManager<IdentityRole>>();
+
+        // ==========================================
+        // CREATE REQUIRED ROLES
+        // ==========================================
 
         var roles = new[]
         {
@@ -230,77 +239,67 @@ public partial class App : Application
                     new IdentityRole(role));
             }
         }
+
+        // ==========================================
+        // USER MANAGER
+        // ==========================================
+
         var userManager =
             scope.ServiceProvider
-                .GetRequiredService<UserManager<ApplicationUser>>();
+                .GetRequiredService<
+                    UserManager<ApplicationUser>>();
 
-        var admin =
+        // ==========================================
+        // OPTIONAL ADMIN ACCOUNT
+        // ==========================================
+
+        ApplicationUser? admin =
             await userManager.FindByNameAsync("admin");
 
-        if (admin == null)
+        if (admin != null)
         {
-            admin = new ApplicationUser
-            {
-                UserName = "admin",
-                Email = "admin@techfix.com",
-                EmailConfirmed = true,
-                CompanyId = 4,
-                IsActive = true
-            };
+            // ==========================================
+            // MAKE SURE ADMIN HAS A PASSWORD
+            // ==========================================
 
-            var createResult =
-                await userManager.CreateAsync(
-                    admin,
-                    "Admin123!");
-
-            if (!createResult.Succeeded)
+            if (string.IsNullOrEmpty(admin.PasswordHash))
             {
-                foreach (var error in createResult.Errors)
+                var passwordResult =
+                    await userManager.AddPasswordAsync(
+                        admin,
+                        "Admin123!");
+
+                if (!passwordResult.Succeeded)
                 {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"{error.Code}: {error.Description}");
+                    foreach (var error in passwordResult.Errors)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"{error.Code}: {error.Description}");
+                    }
                 }
-
-                return;
             }
 
-            admin =
-                await userManager.FindByNameAsync("admin");
-        }
-        else if (string.IsNullOrEmpty(admin.PasswordHash))
-        {
-            var passwordResult =
-                await userManager.AddPasswordAsync(
+            // ==========================================
+            // MAKE SURE ADMIN HAS ADMIN ROLE
+            // ==========================================
+
+            if (!await userManager.IsInRoleAsync(
                     admin,
-                    "Admin123!");
-
-            if (!passwordResult.Succeeded)
+                    "Admin"))
             {
-                foreach (var error in passwordResult.Errors)
-                {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"{error.Code}: {error.Description}");
-                }
-
-                return;
+                await userManager.AddToRoleAsync(
+                    admin,
+                    "Admin");
             }
         }
 
-        // Make sure the admin has the Admin role
-        if (!await userManager.IsInRoleAsync(
-                admin,
-                "Admin"))
-        {
-            await userManager.AddToRoleAsync(
-                admin,
-                "Admin");
-        }
         // ==========================================
         // CREATE INITIAL SUPER ADMIN
         // ==========================================
 
-        var superAdmin =
-            await userManager.FindByNameAsync("superadmin");
+        ApplicationUser? superAdmin =
+            await userManager.FindByNameAsync(
+                "superadmin");
 
         if (superAdmin == null)
         {
@@ -330,12 +329,10 @@ public partial class App : Application
             }
         }
 
-        if (superAdmin == null)
-        {
-            return;
-        }
+        // ==========================================
+        // MAKE SURE SUPER ADMIN HAS CORRECT ROLE
+        // ==========================================
 
-        // Make sure Super Admin has the correct role
         if (!await userManager.IsInRoleAsync(
                 superAdmin,
                 "Super Admin"))
@@ -352,10 +349,9 @@ public partial class App : Application
 
         var db =
             scope.ServiceProvider
-                .GetRequiredService<MasterErpDbContext>();
+                .GetRequiredService<
+                    MasterErpDbContext>();
 
         await MasterDbSeeder.SeedAsync(db);
     }
-
-
 }

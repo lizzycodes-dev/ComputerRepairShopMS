@@ -321,6 +321,18 @@
 
                     </NavigationViewItem>
 
+                    <!-- MY SUBSCRIPTION -->
+                    <NavigationViewItem
+                        x:Name="MySubscriptionItem"
+                        Content="My Subscription"
+                        Tag="my-subscription">
+
+                        <NavigationViewItem.Icon>
+                            <FontIcon Glyph="&#xE8D7;"/>
+                        </NavigationViewItem.Icon>
+
+                    </NavigationViewItem>
+
                     <!-- SYSTEM SETTINGS -->
                     <NavigationViewItem
                     x:Name="SystemSettingsItem"
@@ -330,6 +342,7 @@
                             <SymbolIcon Symbol="Setting"/>
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
+                    
 
                     <!-- TERMS AND CONDITIONS -->
                     <NavigationViewItem

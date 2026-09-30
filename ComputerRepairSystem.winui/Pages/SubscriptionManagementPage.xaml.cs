@@ -136,7 +136,71 @@ public sealed partial class SubscriptionManagementPage : Page
                 });
         }
     }
+    private async void CancelSubscriptionButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not SubscriptionDisplayItem item)
+        {
+            return;
+        }
 
+        var subscription = await _masterDb.Subscriptions
+            .FirstOrDefaultAsync(
+                x => x.SubscriptionId == item.SubscriptionId);
+
+        if (subscription == null)
+        {
+            await ShowMessageAsync(
+                "Subscription Not Found",
+                "The subscription could not be found.");
+
+            return;
+        }
+
+        if (subscription.Status == "Cancelled")
+        {
+            await ShowMessageAsync(
+                "Already Cancelled",
+                "This subscription has already been cancelled.");
+
+            return;
+        }
+
+        var confirmDialog = new ContentDialog
+        {
+            Title = "Cancel Subscription",
+
+            Content =
+                $"Are you sure you want to cancel " +
+                $"the subscription of '{item.CompanyName}'?",
+
+            PrimaryButtonText = "Cancel Subscription",
+
+            CloseButtonText = "Keep Subscription",
+
+            DefaultButton = ContentDialogButton.Close,
+
+            XamlRoot = XamlRoot
+        };
+
+        var result = await confirmDialog.ShowAsync();
+
+        if (result != ContentDialogResult.Primary)
+            return;
+
+        subscription.Status = "Cancelled";
+
+        await _masterDb.SaveChangesAsync();
+
+        await LoadCompanySubscriptionsAsync();
+
+        await ShowMessageAsync(
+            "Subscription Cancelled",
+            $"The subscription of '{item.CompanyName}' " +
+            $"has been cancelled.");
+    }
 
     // ==========================================
     // ADD PLAN
@@ -152,6 +216,17 @@ public sealed partial class SubscriptionManagementPage : Page
             PlaceholderText = "Enter plan name"
         };
 
+        var enterpriseTypeBox = new ComboBox
+        {
+            Header = "Enterprise Type",
+            PlaceholderText = "Select enterprise type"
+        };
+
+        enterpriseTypeBox.Items.Add("Micro");
+        enterpriseTypeBox.Items.Add("Small");
+        enterpriseTypeBox.Items.Add("Medium");
+
+        enterpriseTypeBox.SelectedIndex = 0;
 
         var priceBox = new NumberBox
         {
@@ -188,6 +263,7 @@ public sealed partial class SubscriptionManagementPage : Page
         };
 
         panel.Children.Add(planNameBox);
+        panel.Children.Add(enterpriseTypeBox);
         panel.Children.Add(priceBox);
         panel.Children.Add(durationBox);
         panel.Children.Add(activeCheckBox);
@@ -221,6 +297,15 @@ public sealed partial class SubscriptionManagementPage : Page
         var planName =
             planNameBox.Text.Trim();
 
+        var enterpriseType = enterpriseTypeBox.SelectedItem?.ToString();
+
+        if (string.IsNullOrWhiteSpace(enterpriseType))
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Please select an enterprise type.");
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(planName))
         {
@@ -271,6 +356,8 @@ public sealed partial class SubscriptionManagementPage : Page
         var plan = new SubscriptionPlan
         {
             PlanName = planName,
+
+            EnterpriseType = enterpriseType,
 
             Price =
                 (decimal)priceBox.Value,
@@ -373,50 +460,426 @@ public sealed partial class SubscriptionManagementPage : Page
     {
         _subscriptions.Clear();
 
-        var subscriptions =
-            await _masterDb.Subscriptions
-                .Include(x => x.Company)
-                .Include(x => x.SubscriptionPlan)
-                .OrderByDescending(x => x.StartDate)
-                .ToListAsync();
-
+        var subscriptions = await _masterDb.Subscriptions
+            .Include(x => x.Company)
+            .Include(x => x.SubscriptionPlan)
+            .OrderByDescending(x => x.StartDate)
+            .ToListAsync();
 
         foreach (var subscription in subscriptions)
         {
-            _subscriptions.Add(
-                new SubscriptionDisplayItem
-                {
-                    CompanyName =
-                        subscription.Company?.CompanyName
-                        ?? "Unknown Company",
+            _subscriptions.Add(new SubscriptionDisplayItem
+            {
+                SubscriptionId = subscription.SubscriptionId,
 
-                    PlanName =
-                        subscription.SubscriptionPlan?.PlanName
-                        ?? "Unknown Plan",
+                CompanyId = subscription.CompanyId,
 
-                    Status =
-                        subscription.Status,
+                SubscriptionPlanId = subscription.SubscriptionPlanId,
 
-                    StartDateText =
-                        subscription.StartDate
-                            .ToLocalTime()
-                            .ToString("MMM dd, yyyy"),
+                CompanyName = subscription.Company?.CompanyName
+                    ?? "Unknown Company",
 
-                    EndDateText =
-                        subscription.EndDate.HasValue
-                            ? subscription.EndDate.Value
-                                .ToLocalTime()
-                                .ToString("MMM dd, yyyy")
-                            : "No End Date"
-                });
+                PlanName = subscription.SubscriptionPlan?.PlanName
+                    ?? "Unknown Plan",
+
+                EnterpriseType = subscription.SubscriptionPlan?.EnterpriseType
+                    ?? "Unknown",
+
+                Price = subscription.SubscriptionPlan?.Price ?? 0,
+
+                Status = subscription.Status,
+
+                StartDate = subscription.StartDate,
+
+                EndDate = subscription.EndDate,
+
+                StartDateText = subscription.StartDate
+                    .ToLocalTime()
+                    .ToString("MMM dd, yyyy"),
+
+                EndDateText = subscription.EndDate.HasValue
+                    ? subscription.EndDate.Value
+                        .ToLocalTime()
+                        .ToString("MMM dd, yyyy")
+                    : "No End Date"
+            });
         }
     }
 
+    private async void RenewSubscriptionButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not SubscriptionDisplayItem item)
+        {
+            return;
+        }
+
+        var subscription = await _masterDb.Subscriptions
+            .Include(x => x.SubscriptionPlan)
+            .FirstOrDefaultAsync(
+                x => x.SubscriptionId == item.SubscriptionId);
+
+        if (subscription == null)
+        {
+            await ShowMessageAsync(
+                "Subscription Not Found",
+                "The subscription could not be found.");
+            return;
+        }
+
+        if (subscription.SubscriptionPlan == null)
+        {
+            await ShowMessageAsync(
+                "Plan Not Found",
+                "The subscription does not have a valid plan.");
+            return;
+        }
+
+        var plan = subscription.SubscriptionPlan;
+
+        var baseDate = subscription.EndDate.HasValue &&
+                       subscription.EndDate.Value > DateTime.UtcNow
+            ? subscription.EndDate.Value
+            : DateTime.UtcNow;
+
+        var newEndDate =
+            baseDate.AddDays(plan.DurationInDays);
+
+        var confirmDialog = new ContentDialog
+        {
+            Title = "Renew Subscription",
+            Content =
+                $"Company: {item.CompanyName}\n" +
+                $"Plan: {plan.PlanName}\n" +
+                $"Duration: {plan.DurationInDays} days\n\n" +
+                $"New expiration date: " +
+                $"{newEndDate.ToLocalTime():MMM dd, yyyy}",
+            PrimaryButtonText = "Renew",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot
+        };
+
+        var result = await confirmDialog.ShowAsync();
+
+        if (result != ContentDialogResult.Primary)
+            return;
+
+        subscription.EndDate = newEndDate;
+        subscription.Status = "Active";
+
+        await _masterDb.SaveChangesAsync();
+
+        await LoadCompanySubscriptionsAsync();
+
+        await ShowMessageAsync(
+            "Subscription Renewed",
+            $"'{item.CompanyName}' has been renewed " +
+            $"until {newEndDate.ToLocalTime():MMM dd, yyyy}.");
+    }
+    private async void ChangeSubscriptionButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not SubscriptionDisplayItem item)
+        {
+            return;
+        }
+
+        var subscription = await _masterDb.Subscriptions
+            .Include(x => x.SubscriptionPlan)
+            .FirstOrDefaultAsync(
+                x => x.SubscriptionId == item.SubscriptionId);
+
+        if (subscription == null)
+        {
+            await ShowMessageAsync(
+                "Subscription Not Found",
+                "The subscription could not be found.");
+            return;
+        }
+
+        if (subscription.Status != "Active")
+        {
+            await ShowMessageAsync(
+                "Cannot Change Plan",
+                "Only active subscriptions can have their plan changed.");
+            return;
+        }
+
+        var plans = await _masterDb.SubscriptionPlans
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Price)
+            .ThenBy(x => x.PlanName)
+            .ToListAsync();
+
+        if (plans.Count == 0)
+        {
+            await ShowMessageAsync(
+                "No Plans",
+                "There are no active subscription plans available.");
+            return;
+        }
+
+        var planBox = new ComboBox
+        {
+            Header = "New Subscription Plan",
+            PlaceholderText = "Select a plan",
+            DisplayMemberPath = "PlanName"
+        };
+
+        foreach (var plan in plans)
+        {
+            planBox.Items.Add(plan);
+        }
+
+        planBox.SelectedItem = plans
+            .FirstOrDefault(x =>
+                x.SubscriptionPlanId ==
+                subscription.SubscriptionPlanId);
+
+        var panel = new StackPanel
+        {
+            Spacing = 12
+        };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text = $"Company: {item.CompanyName}"
+            });
+
+        panel.Children.Add(planBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Change Subscription Plan",
+            Content = panel,
+            PrimaryButtonText = "Change Plan",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+
+        if (result != ContentDialogResult.Primary)
+            return;
+
+        if (planBox.SelectedItem is not SubscriptionPlan selectedPlan)
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Please select a subscription plan.");
+            return;
+        }
+
+        if (selectedPlan.SubscriptionPlanId ==
+            subscription.SubscriptionPlanId)
+        {
+            await ShowMessageAsync(
+                "No Change",
+                "The company is already using this plan.");
+            return;
+        }
+
+        var confirmDialog = new ContentDialog
+        {
+            Title = "Confirm Plan Change",
+            Content =
+                $"Change '{item.CompanyName}' from " +
+                $"'{subscription.SubscriptionPlan?.PlanName}' " +
+                $"to '{selectedPlan.PlanName}'?",
+            PrimaryButtonText = "Change",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot
+        };
+
+        var confirmResult = await confirmDialog.ShowAsync();
+
+        if (confirmResult != ContentDialogResult.Primary)
+            return;
+
+        subscription.SubscriptionPlanId =
+            selectedPlan.SubscriptionPlanId;
+
+        await _masterDb.SaveChangesAsync();
+
+        await LoadCompanySubscriptionsAsync();
+
+        await ShowMessageAsync(
+            "Plan Changed",
+            $"'{item.CompanyName}' is now using " +
+            $"'{selectedPlan.PlanName}'.");
+    }
+    private async void EditPlanButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not SubscriptionPlan selectedPlan)
+        {
+            return;
+        }
+
+        var planNameBox = new TextBox
+        {
+            Header = "Plan Name",
+            Text = selectedPlan.PlanName,
+            PlaceholderText = "Enter plan name"
+        };
+
+        var enterpriseTypeBox = new ComboBox
+        {
+            Header = "Enterprise Type"
+        };
+
+        enterpriseTypeBox.Items.Add("Micro");
+        enterpriseTypeBox.Items.Add("Small");
+        enterpriseTypeBox.Items.Add("Medium");
+
+        enterpriseTypeBox.SelectedItem = selectedPlan.EnterpriseType;
+
+        var priceBox = new NumberBox
+        {
+            Header = "Price",
+            Value = (double)selectedPlan.Price,
+            Minimum = 0,
+            SmallChange = 100,
+            SpinButtonPlacementMode =
+                NumberBoxSpinButtonPlacementMode.Compact
+        };
+
+        var durationBox = new NumberBox
+        {
+            Header = "Duration (days)",
+            Value = selectedPlan.DurationInDays,
+            Minimum = 1,
+            SpinButtonPlacementMode =
+                NumberBoxSpinButtonPlacementMode.Compact
+        };
+
+        var activeCheckBox = new CheckBox
+        {
+            Content = "Active",
+            IsChecked = selectedPlan.IsActive
+        };
+
+        var panel = new StackPanel
+        {
+            Spacing = 12
+        };
+
+        panel.Children.Add(planNameBox);
+        panel.Children.Add(enterpriseTypeBox);
+        panel.Children.Add(priceBox);
+        panel.Children.Add(durationBox);
+        panel.Children.Add(activeCheckBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Edit Subscription Plan",
+            Content = panel,
+            PrimaryButtonText = "Save",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+
+        if (result != ContentDialogResult.Primary)
+            return;
+
+        var planName = planNameBox.Text.Trim();
+        var enterpriseType = enterpriseTypeBox.SelectedItem?.ToString();
+
+        if (string.IsNullOrWhiteSpace(planName))
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Plan name is required.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(enterpriseType))
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Enterprise type is required.");
+            return;
+        }
+
+        if (priceBox.Value < 0)
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Price cannot be negative.");
+            return;
+        }
+
+        if (durationBox.Value < 1)
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Duration must be at least 1 day.");
+            return;
+        }
+
+        var duplicatePlan = await _masterDb.SubscriptionPlans
+            .AnyAsync(x =>
+                x.SubscriptionPlanId != selectedPlan.SubscriptionPlanId &&
+                x.PlanName == planName);
+
+        if (duplicatePlan)
+        {
+            await ShowMessageAsync(
+                "Plan Already Exists",
+                "Another subscription plan already has that name.");
+            return;
+        }
+
+        selectedPlan.PlanName = planName;
+        selectedPlan.EnterpriseType = enterpriseType;
+        selectedPlan.Price = (decimal)priceBox.Value;
+        selectedPlan.DurationInDays = (int)durationBox.Value;
+        selectedPlan.IsActive = activeCheckBox.IsChecked == true;
+
+        await _masterDb.SaveChangesAsync();
+
+        await LoadPlansAsync();
+
+        await ShowMessageAsync(
+            "Plan Updated",
+            $"Subscription plan '{selectedPlan.PlanName}' was updated successfully.");
+    }
 
     // ==========================================
     // ADD COMPANY SUBSCRIPTION
     // ==========================================
+    private async Task UpdateExpiredSubscriptionsAsync()
+    {
+        var now = DateTime.UtcNow;
 
+        var expiredSubscriptions = await _masterDb.Subscriptions
+            .Where(x =>
+                x.Status == "Active" &&
+                x.EndDate.HasValue &&
+                x.EndDate.Value <= now)
+            .ToListAsync();
+
+        if (expiredSubscriptions.Count == 0)
+            return;
+
+        foreach (var subscription in expiredSubscriptions)
+        {
+            subscription.Status = "Expired";
+        }
+
+        await _masterDb.SaveChangesAsync();
+    }
     private async void AddSubscriptionButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -663,18 +1126,29 @@ public class ModuleSelectionItem
 
 public class SubscriptionDisplayItem
 {
-    public string CompanyName { get; set; }
-        = string.Empty;
+    public int SubscriptionId { get; set; }
 
-    public string PlanName { get; set; }
-        = string.Empty;
+    public int CompanyId { get; set; }
 
-    public string Status { get; set; }
-        = string.Empty;
+    public int SubscriptionPlanId { get; set; }
 
-    public string StartDateText { get; set; }
-        = string.Empty;
+    public string CompanyName { get; set; } = string.Empty;
 
-    public string EndDateText { get; set; }
-        = string.Empty;
+    public string PlanName { get; set; } = string.Empty;
+
+    public string EnterpriseType { get; set; } = string.Empty;
+
+    public decimal Price { get; set; }
+
+    public string PriceText => $"₱{Price:N2}";
+
+    public string Status { get; set; } = string.Empty;
+
+    public DateTime StartDate { get; set; }
+
+    public DateTime? EndDate { get; set; }
+
+    public string StartDateText { get; set; } = string.Empty;
+
+    public string EndDateText { get; set; } = string.Empty;
 }

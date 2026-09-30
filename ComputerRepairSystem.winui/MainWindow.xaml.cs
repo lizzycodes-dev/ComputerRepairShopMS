@@ -119,6 +119,8 @@ public sealed partial class MainWindow : Window
         PurchaseManagementItem.Visibility =
             Visibility.Collapsed;
 
+        MySubscriptionItem.Visibility =
+            Visibility.Collapsed;
 
         var role =
             CurrentUser.Role;
@@ -200,6 +202,9 @@ public sealed partial class MainWindow : Window
                 Visibility.Visible;
 
             PurchaseManagementItem.Visibility =
+                Visibility.Visible;
+
+            MySubscriptionItem.Visibility =
                 Visibility.Visible;
 
             HomeItem.IsSelected =
@@ -740,6 +745,9 @@ public sealed partial class MainWindow : Window
         PurchaseManagementItem.Visibility =
             Visibility.Collapsed;
 
+        MySubscriptionItem.Visibility =
+            Visibility.Collapsed;
+
         HomeItem.IsSelected = false;
 
         NavFrame.Content =
@@ -816,6 +824,10 @@ public sealed partial class MainWindow : Window
 
                 case "supplier-management":
                     NavigateToSupplierManagementPage();
+                    break;
+
+                case "my-subscription":
+                    NavigateToMySubscriptionPage();
                     break;
 
                 case "settings":
@@ -1189,6 +1201,19 @@ public sealed partial class MainWindow : Window
             App.Services
                 .GetRequiredService<
                     PurchaseManagementPage>();
+
+        NavFrame.Content = page;
+    }
+    // ==========================================
+    // MY SUBSCRIPTION
+    // ==========================================
+
+    private void NavigateToMySubscriptionPage()
+    {
+        var page =
+            App.Services
+                .GetRequiredService<
+                    MySubscriptionPage>();
 
         NavFrame.Content = page;
     }

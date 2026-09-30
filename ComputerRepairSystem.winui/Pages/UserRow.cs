@@ -14,6 +14,8 @@ public class UserRow
 
     public string CompanyName { get; set; } = string.Empty;
 
+    public string Role { get; set; } = string.Empty;
+
     public bool IsActive =>
         User.IsActive;
 }

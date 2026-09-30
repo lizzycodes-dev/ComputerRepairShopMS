@@ -18,7 +18,7 @@ public sealed partial class UserManagementPage : Page
     private readonly TenantDbContextFactory _tenantDbFactory;
     private readonly SubscriptionAccessService
         _subscriptionAccessService;
-
+     
     public UserManagementPage(
         UserManager<ApplicationUser> userManager,
         MasterErpDbContext masterDb,
@@ -101,24 +101,33 @@ public sealed partial class UserManagementPage : Page
             // BUILD USER ROWS
             // ==========================================
 
-            var userRows =
-                users
-                    .Select(user =>
+            var userRows = new List<UserRow>();
+
+            foreach (var user in users)
+            {
+                var company =
+                    companies.FirstOrDefault(
+                        c => c.CompanyId == user.CompanyId);
+
+                var roles =
+                    await _userManager.GetRolesAsync(user);
+
+                var roleName =
+                    roles.FirstOrDefault()
+                    ?? "No Role";
+
+                userRows.Add(
+                    new UserRow
                     {
-                        var company =
-                            companies.FirstOrDefault(
-                                c => c.CompanyId == user.CompanyId);
+                        User = user,
 
-                        return new UserRow
-                        {
-                            User = user,
+                        CompanyName =
+                            company?.CompanyName
+                            ?? "System / No Company",
 
-                            CompanyName =
-                                company?.CompanyName
-                                ?? "System / No Company"
-                        };
-                    })
-                    .ToList();
+                        Role = roleName
+                    });
+            }
 
 
             UsersListView.ItemsSource =
