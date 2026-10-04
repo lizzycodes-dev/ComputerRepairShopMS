@@ -44,6 +44,10 @@ builder.Services.AddDbContextFactory<TenantDbContext>(options =>
         builder.Configuration.GetConnectionString("TenantLocal")));
 
 
+builder.Services.AddScoped<
+    ITenantDbContextFactory,
+    TenantDbContextFactory>();
+
 // ==========================================
 // REPOSITORIES
 // ==========================================

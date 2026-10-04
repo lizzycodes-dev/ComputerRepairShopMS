@@ -351,7 +351,10 @@ public partial class App : Application
             scope.ServiceProvider
                 .GetRequiredService<
                     MasterErpDbContext>();
-
+        if (db == null)
+        {
+            throw new Exception("MasterErpDbContext is NULL.");
+        }
         await MasterDbSeeder.SeedAsync(db);
     }
 }

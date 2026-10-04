@@ -27,6 +27,7 @@
 	  <None Remove="Pages\CustomerManagementPage.xaml" />
 	  <None Remove="Pages\EmployeeManagementPage.xaml" />
 	  <None Remove="Pages\LoginPage.xaml" />
+	  <None Remove="Pages\MySubscriptionPage.xaml" />
 	  <None Remove="Pages\PayrollManagementPage.xaml" />
 	  <None Remove="Pages\PurchaseManagementPage.xaml" />
 	  <None Remove="Pages\SubscriptionManagementPage.xaml" />
@@ -56,6 +57,9 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</None>
+		<Page Update="Pages\MySubscriptionPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Update="Pages\PurchaseManagementPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
