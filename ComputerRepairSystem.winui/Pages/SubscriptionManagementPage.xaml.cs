@@ -39,7 +39,215 @@ public sealed partial class SubscriptionManagementPage : Page
         Loaded += SubscriptionManagementPage_Loaded;
     }
 
+    // ==========================================
+    // ADD MODULE
+    // ==========================================
 
+    private async void AddModuleButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var moduleNameBox = new TextBox
+        {
+            Header = "Module Name",
+            PlaceholderText = "Example: Branch Management"
+        };
+
+        var moduleCodeBox = new TextBox
+        {
+            Header = "Module Code",
+            PlaceholderText = "Example: branch-management"
+        };
+
+        var descriptionBox = new TextBox
+        {
+            Header = "Description",
+            PlaceholderText = "Describe what this module provides.",
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            Height = 90
+        };
+
+        var displayOrderBox = new NumberBox
+        {
+            Header = "Display Order",
+            Minimum = 1,
+            Value = 1,
+            SpinButtonPlacementMode =
+                NumberBoxSpinButtonPlacementMode.Compact
+        };
+
+        var activeCheckBox = new CheckBox
+        {
+            Content = "Module is active",
+            IsChecked = true
+        };
+
+        // Automatically suggest the next display order.
+        var highestDisplayOrder =
+            await _masterDb.ModuleDefinitions
+                .Select(x => (int?)x.DisplayOrder)
+                .MaxAsync()
+            ?? 0;
+
+        displayOrderBox.Value =
+            highestDisplayOrder + 1;
+
+        var panel = new StackPanel
+        {
+            Spacing = 12
+        };
+
+        panel.Children.Add(moduleNameBox);
+        panel.Children.Add(moduleCodeBox);
+        panel.Children.Add(descriptionBox);
+        panel.Children.Add(displayOrderBox);
+        panel.Children.Add(activeCheckBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Add Feature Module",
+
+            Content = panel,
+
+            PrimaryButtonText = "Add",
+
+            CloseButtonText = "Cancel",
+
+            DefaultButton =
+                ContentDialogButton.Primary,
+
+            XamlRoot = XamlRoot
+        };
+
+        var result =
+            await dialog.ShowAsync();
+
+        if (result != ContentDialogResult.Primary)
+            return;
+
+        // ==========================================
+        // GET VALUES
+        // ==========================================
+
+        var moduleName =
+            moduleNameBox.Text.Trim();
+
+        var moduleCode =
+            moduleCodeBox.Text.Trim()
+                .ToLowerInvariant();
+
+        var description =
+            string.IsNullOrWhiteSpace(
+                descriptionBox.Text)
+                ? null
+                : descriptionBox.Text.Trim();
+
+        var displayOrder =
+            (int)displayOrderBox.Value;
+
+        var isActive =
+            activeCheckBox.IsChecked == true;
+
+        // ==========================================
+        // VALIDATION
+        // ==========================================
+
+        if (string.IsNullOrWhiteSpace(moduleName))
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Module name is required.");
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(moduleCode))
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Module code is required.");
+
+            return;
+        }
+
+        if (displayOrder < 1)
+        {
+            await ShowMessageAsync(
+                "Validation Error",
+                "Display order must be at least 1.");
+
+            return;
+        }
+
+        // ==========================================
+        // CHECK DUPLICATES
+        // ==========================================
+
+        var duplicateCode =
+            await _masterDb.ModuleDefinitions
+                .AnyAsync(x =>
+                    x.ModuleCode == moduleCode);
+
+        if (duplicateCode)
+        {
+            await ShowMessageAsync(
+                "Module Already Exists",
+                $"A module with the code '{moduleCode}' already exists.");
+
+            return;
+        }
+
+        var duplicateName =
+            await _masterDb.ModuleDefinitions
+                .AnyAsync(x =>
+                    x.ModuleName == moduleName);
+
+        if (duplicateName)
+        {
+            await ShowMessageAsync(
+                "Module Already Exists",
+                $"A module named '{moduleName}' already exists.");
+
+            return;
+        }
+
+        // ==========================================
+        // CREATE MODULE
+        // ==========================================
+
+        var module = new ModuleDefinition
+        {
+            ModuleCode = moduleCode,
+
+            ModuleName = moduleName,
+
+            Description = description,
+
+            IsActive = isActive,
+
+            DisplayOrder = displayOrder
+        };
+
+        _masterDb.ModuleDefinitions.Add(module);
+
+        await _masterDb.SaveChangesAsync();
+
+        // ==========================================
+        // REFRESH MODULE LIST
+        // ==========================================
+
+        if (PlansListView.SelectedItem
+            is SubscriptionPlan selectedPlan)
+        {
+            await LoadModulesAsync(
+                selectedPlan.SubscriptionPlanId);
+        }
+
+        await ShowMessageAsync(
+            "Module Added",
+            $"'{moduleName}' was added successfully.");
+    }
     // ==========================================
     // PAGE LOADED
     // ==========================================

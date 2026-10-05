@@ -10,15 +10,22 @@ namespace ComputerRepairSystem_winui.Pages;
 public sealed partial class EmployeeManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly SubscriptionAccessService
+    _subscriptionAccessService;
 
+    private bool _hasBranchModule;
     private List<EmployeeRow> _allEmployees = new();
 
     public EmployeeManagementPage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        SubscriptionAccessService subscriptionAccessService)
     {
         InitializeComponent();
 
         _tenantDbFactory = tenantDbFactory;
+
+        _subscriptionAccessService =
+            subscriptionAccessService;
 
         Loaded += EmployeeManagementPage_Loaded;
     }
@@ -46,6 +53,14 @@ public sealed partial class EmployeeManagementPage : Page
         public string Position =>
             Employee.Position;
 
+        public string DepartmentName =>
+            Employee.Department?.DepartmentName
+            ?? "—";
+
+        public string BranchName =>
+            Employee.Branch?.BranchName
+            ?? "—";
+
         public string HireDateText =>
             Employee.HireDate.ToString("MMM dd, yyyy");
 
@@ -63,6 +78,13 @@ public sealed partial class EmployeeManagementPage : Page
         object sender,
         RoutedEventArgs e)
     {
+        var modules =
+            await _subscriptionAccessService
+                .GetAccessibleModuleCodesAsync();
+
+        _hasBranchModule =
+            modules.Contains("BRANCH");
+
         await LoadEmployeesAsync();
     }
 
@@ -267,6 +289,13 @@ public sealed partial class EmployeeManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var modules =
+                await _subscriptionAccessService
+                    .GetAccessibleModuleCodesAsync();
+
+            var hasBranchModule =
+                modules.Contains("BRANCH");
+
             var departments =
                 await db.Departments
                     .AsNoTracking()
@@ -292,24 +321,28 @@ public sealed partial class EmployeeManagementPage : Page
             // LOAD BRANCHES
             // ==========================================
 
-            var branches =
-                await db.Branches
-                    .AsNoTracking()
-                    .Where(x => x.IsActive)
-                    .OrderBy(x => x.BranchName)
-                    .ToListAsync();
+            ComboBox? branchBox = null;
 
-
-            var branchBox = new ComboBox
+            if (hasBranchModule)
             {
-                Header = "Branch",
-                PlaceholderText = "Optional",
-                DisplayMemberPath = "BranchName"
-            };
+                var branches =
+                    await db.Branches
+                        .AsNoTracking()
+                        .Where(x => x.IsActive)
+                        .OrderBy(x => x.BranchName)
+                        .ToListAsync();
 
-            foreach (var branch in branches)
-            {
-                branchBox.Items.Add(branch);
+                branchBox = new ComboBox
+                {
+                    Header = "Branch",
+                    PlaceholderText = "Optional",
+                    DisplayMemberPath = "BranchName"
+                };
+
+                foreach (var branch in branches)
+                {
+                    branchBox.Items.Add(branch);
+                }
             }
 
 
@@ -343,17 +376,16 @@ public sealed partial class EmployeeManagementPage : Page
 
             panel.Children.Add(positionBox);
 
-            panel.Children.Add(
-                departmentBox);
+            panel.Children.Add(departmentBox);
 
-            panel.Children.Add(
-                branchBox);
+            if (branchBox != null)
+            {
+                panel.Children.Add(branchBox);
+            }
 
-            panel.Children.Add(
-                hireDatePicker);
+            panel.Children.Add(hireDatePicker);
 
-            panel.Children.Add(
-                activeCheckBox);
+            panel.Children.Add(activeCheckBox);
 
 
             var scrollViewer = new ScrollViewer
@@ -476,7 +508,7 @@ public sealed partial class EmployeeManagementPage : Page
                     : null,
 
                 BranchId =
-                    branchBox.SelectedItem
+                    branchBox?.SelectedItem
                         is Branch selectedBranch
                         ? selectedBranch.BranchId
                         : null,
@@ -540,6 +572,12 @@ public sealed partial class EmployeeManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var modules =
+                await _subscriptionAccessService
+                    .GetAccessibleModuleCodesAsync();
+
+            var hasBranchModule =
+                modules.Contains("BRANCH");
 
             var employee =
                 await db.Employees
@@ -637,33 +675,37 @@ public sealed partial class EmployeeManagementPage : Page
             }
 
 
-            var branches =
-                await db.Branches
-                    .AsNoTracking()
-                    .Where(x => x.IsActive)
-                    .OrderBy(x => x.BranchName)
-                    .ToListAsync();
+            ComboBox? branchBox = null;
 
-            var branchBox = new ComboBox
+            if (hasBranchModule)
             {
-                Header = "Branch",
-                PlaceholderText = "Optional",
-                DisplayMemberPath = "BranchName"
-            };
+                var branches =
+                    await db.Branches
+                        .AsNoTracking()
+                        .Where(x => x.IsActive)
+                        .OrderBy(x => x.BranchName)
+                        .ToListAsync();
 
-            foreach (var branch in branches)
-            {
-                branchBox.Items.Add(branch);
-            }
+                branchBox = new ComboBox
+                {
+                    Header = "Branch",
+                    PlaceholderText = "Optional",
+                    DisplayMemberPath = "BranchName"
+                };
 
+                foreach (var branch in branches)
+                {
+                    branchBox.Items.Add(branch);
+                }
 
-            if (employee.BranchId.HasValue)
-            {
-                branchBox.SelectedItem =
-                    branches.FirstOrDefault(
-                        x =>
-                            x.BranchId ==
-                            employee.BranchId.Value);
+                if (employee.BranchId.HasValue)
+                {
+                    branchBox.SelectedItem =
+                        branches.FirstOrDefault(
+                            x =>
+                                x.BranchId ==
+                                employee.BranchId.Value);
+                }
             }
 
 
@@ -692,8 +734,10 @@ public sealed partial class EmployeeManagementPage : Page
             panel.Children.Add(
                 departmentBox);
 
-            panel.Children.Add(
-                branchBox);
+            if (branchBox != null)
+            {
+                panel.Children.Add(branchBox);
+            }
 
             panel.Children.Add(
                 hireDatePicker);
@@ -818,7 +862,7 @@ public sealed partial class EmployeeManagementPage : Page
                     : null;
 
             employee.BranchId =
-                branchBox.SelectedItem
+                branchBox?.SelectedItem
                     is Branch selectedBranch
                     ? selectedBranch.BranchId
                     : null;
@@ -907,6 +951,12 @@ public sealed partial class EmployeeManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var modules =
+                await _subscriptionAccessService
+                    .GetAccessibleModuleCodesAsync();
+
+            var hasBranchModule =
+                modules.Contains("BRANCH");
 
             var employee =
                 await db.Employees

@@ -33,6 +33,7 @@
 	  <None Remove="Pages\PayrollManagementPage.xaml" />
 	  <None Remove="Pages\PurchaseManagementPage.xaml" />
 	  <None Remove="Pages\SubscriptionManagementPage.xaml" />
+	  <None Remove="Pages\SuperAdminSystemSettingsPage.xaml" />
 	  <None Remove="Pages\SupplierManagementPage.xaml" />
 	  <None Remove="Pages\TermsAndConditionsPage.xaml" />
 	  <None Remove="Pages\UserManagementPage.xaml" />
@@ -59,6 +60,9 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</None>
+		<Page Update="Pages\SuperAdminSystemSettingsPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Update="Pages\DepartmentManagementPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>

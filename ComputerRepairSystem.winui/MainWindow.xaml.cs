@@ -15,19 +15,24 @@ public sealed partial class MainWindow : Window
 {
     private readonly SubscriptionAccessService
         _subscriptionAccessService;
-
+    private readonly SuperAdminSystemSettingsService
+    _superAdminSystemSettingsService;
 
     // ==========================================
     // CONSTRUCTOR
     // ==========================================
 
-    public MainWindow(
+    public MainWindow(SuperAdminSystemSettingsService
+    superAdminSystemSettingsService,
         SubscriptionAccessService subscriptionAccessService)
     {
         InitializeComponent();
 
         _subscriptionAccessService =
             subscriptionAccessService;
+
+        _superAdminSystemSettingsService =
+            superAdminSystemSettingsService;
 
         ShowLogin();
 
@@ -42,7 +47,57 @@ public sealed partial class MainWindow : Window
             "Assets/AppIcon.ico");
     }
 
+    private async Task<bool>
+        CheckMaintenanceModeAsync()
+    {
+        try
+        {
+            var isMaintenanceMode =
+                await _superAdminSystemSettingsService
+                    .IsMaintenanceModeEnabledAsync();
 
+            if (!isMaintenanceMode)
+            {
+                return false;
+            }
+
+            // Super Admin is allowed to access
+            // the application during maintenance.
+            if (CurrentUser.Role == "Super Admin")
+            {
+                return false;
+            }
+
+            await ShowMaintenanceMessageAsync();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+
+            // Fail open if the master database
+            // cannot be checked.
+            return false;
+        }
+    }
+
+    private async Task
+        ShowMaintenanceMessageAsync()
+    {
+        var dialog =
+            new ContentDialog
+            {
+                Title = "System Maintenance",
+                Content =
+                    "The system is currently under maintenance. " +
+                    "Please try again later.",
+                CloseButtonText = "OK",
+                XamlRoot = RootGrid.XamlRoot
+            };
+
+        await dialog.ShowAsync();
+    }
     // ==========================================
     // TITLE BAR
     // ==========================================
@@ -128,6 +183,10 @@ public sealed partial class MainWindow : Window
         DepartmentManagementItem.Visibility =
             Visibility.Collapsed;
 
+        SuperAdminSystemSettingsItem.Visibility =
+            Visibility.Collapsed;
+
+
         var role =
             CurrentUser.Role;
 
@@ -151,6 +210,9 @@ public sealed partial class MainWindow : Window
                 Visibility.Visible;
 
             TermsAndConditionItem.Visibility =
+                Visibility.Visible;
+
+            SuperAdminSystemSettingsItem.Visibility =
                 Visibility.Visible;
 
             HomeItem.IsSelected =
@@ -219,11 +281,6 @@ public sealed partial class MainWindow : Window
             MySubscriptionItem.Visibility =
                 Visibility.Visible;
 
-            BranchManagementItem.Visibility =
-                Visibility.Visible;
-
-            DepartmentManagementItem.Visibility =
-                Visibility.Visible;
 
             HomeItem.IsSelected =
                 true;
@@ -454,6 +511,18 @@ public sealed partial class MainWindow : Window
 
             TermsAndConditionItem.Visibility =
                 Visibility.Visible;
+
+            // BRANCH MANAGEMENT
+            BranchManagementItem.Visibility =
+                modules.Contains("BRANCH")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            // DEPARTMENT MANAGEMENT
+            DepartmentManagementItem.Visibility =
+                modules.Contains("DEPARTMENT")
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
 
             if (NavView.SelectedItem
                 is NavigationViewItem selectedAdminItem
@@ -772,6 +841,9 @@ public sealed partial class MainWindow : Window
         DepartmentManagementItem.Visibility =
             Visibility.Collapsed;
 
+        SuperAdminSystemSettingsItem.Visibility =
+            Visibility.Collapsed;
+
         HomeItem.IsSelected = false;
 
         NavFrame.Content =
@@ -876,6 +948,10 @@ public sealed partial class MainWindow : Window
 
                 case "department-management":
                     NavigateToDepartmentManagementPage();
+                    break;
+
+                case "super-admin-system-settings":
+                    NavigateToSuperAdminSystemSettingsPage();
                     break;
             }
         }
@@ -1272,6 +1348,14 @@ public sealed partial class MainWindow : Window
                     DepartmentManagementPage>();
 
         NavFrame.Content = page;
+    }
+
+    private void NavigateToSuperAdminSystemSettingsPage()
+    {
+        NavFrame.Content =
+            App.Services
+                .GetRequiredService<
+                    SuperAdminSystemSettingsPage>();
     }
 }
 

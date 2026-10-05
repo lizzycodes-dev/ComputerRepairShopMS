@@ -158,6 +158,10 @@ public partial class App : Application
         services.AddTransient<BranchManagementPage>();
 
         services.AddTransient<DepartmentManagementPage>();
+
+        services.AddTransient<SuperAdminSystemSettingsPage>();
+
+        services.AddSingleton<SuperAdminSystemSettingsService>();
         // ==========================================
         // MAIN WINDOW
         // ==========================================

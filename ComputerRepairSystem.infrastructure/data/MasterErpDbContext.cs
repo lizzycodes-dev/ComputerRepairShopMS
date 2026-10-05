@@ -30,6 +30,9 @@ namespace ComputerRepairSystem.infrastructure.data
         public DbSet<TermsAndConditions> TermsAndConditions
             => Set<TermsAndConditions>();
 
+        public DbSet<SuperAdminSystemSettings> SuperAdminSystemSettings
+        => Set<SuperAdminSystemSettings>();
+
         public MasterErpDbContext(
             DbContextOptions<MasterErpDbContext> options)
             : base(options)
@@ -218,6 +221,41 @@ namespace ComputerRepairSystem.infrastructure.data
                     .IsRequired();
 
                 entity.Property(t => t.IsPublished)
+                    .IsRequired();
+            });
+
+            // ==========================================
+            // SUPER ADMIN SYSTEM SETTINGS
+            // ==========================================
+
+            builder.Entity<SuperAdminSystemSettings>(entity =>
+            {
+                entity.HasKey(
+                    x => x.SuperAdminSystemSettingsId);
+
+                entity.Property(x => x.PlatformName)
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                entity.Property(x => x.PlatformDescription)
+                    .HasMaxLength(500);
+
+                entity.Property(x => x.SupportEmail)
+                    .HasMaxLength(200);
+
+                entity.Property(x => x.SupportPhone)
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.MaintenanceMode)
+                    .IsRequired();
+
+                entity.Property(x => x.AllowNewCompanyRegistration)
+                    .IsRequired();
+
+                entity.Property(x => x.DefaultTrialDurationInDays)
+                    .IsRequired();
+
+                entity.Property(x => x.UpdatedAt)
                     .IsRequired();
             });
         }

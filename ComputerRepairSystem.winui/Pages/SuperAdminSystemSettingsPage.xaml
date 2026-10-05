@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Page
+    x:Class="ComputerRepairSystem_winui.Pages.SuperAdminSystemSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <ScrollViewer
+        VerticalScrollBarVisibility="Auto">
+
+        <Grid
+            Padding="32"
+            RowSpacing="24">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- HEADER -->
+            <StackPanel
+                Grid.Row="0"
+                Spacing="6">
+
+                <TextBlock
+                    Text="System Settings"
+                    FontSize="32"
+                    FontWeight="SemiBold"/>
+
+                <TextBlock
+                    Text="Manage global settings for the repair shop management platform."
+                    Opacity="0.7"/>
+
+            </StackPanel>
+
+
+            <!-- SETTINGS -->
+            <StackPanel
+                Grid.Row="1"
+                Spacing="20"
+                MaxWidth="700">
+
+
+                <!-- PLATFORM CONFIGURATION -->
+                <Border
+                    Padding="24"
+                    CornerRadius="12"
+                    BorderThickness="1">
+
+                    <StackPanel
+                        Spacing="16">
+
+                        <TextBlock
+                            Text="Platform Configuration"
+                            FontSize="20"
+                            FontWeight="SemiBold"/>
+
+                        <TextBox
+                            x:Name="PlatformNameBox"
+                            Header="Platform Name"
+                            PlaceholderText="Enter platform name"/>
+
+                        <TextBox
+                            x:Name="PlatformDescriptionBox"
+                            Header="Platform Description"
+                            PlaceholderText="Enter platform description"
+                            TextWrapping="Wrap"
+                            AcceptsReturn="True"
+                            MinHeight="80"/>
+
+                    </StackPanel>
+
+                </Border>
+
+
+                <!-- SUPPORT INFORMATION -->
+                <Border
+                    Padding="24"
+                    CornerRadius="12"
+                    BorderThickness="1">
+
+                    <StackPanel
+                        Spacing="16">
+
+                        <TextBlock
+                            Text="Support Information"
+                            FontSize="20"
+                            FontWeight="SemiBold"/>
+
+                        <TextBox
+                            x:Name="SupportEmailBox"
+                            Header="Support Email"
+                            PlaceholderText="support@example.com"/>
+
+                        <TextBox
+                            x:Name="SupportPhoneBox"
+                            Header="Support Phone"
+                            PlaceholderText="Enter support phone number"/>
+
+                    </StackPanel>
+
+                </Border>
+
+
+                <!-- REGISTRATION -->
+                <Border
+                    Padding="24"
+                    CornerRadius="12"
+                    BorderThickness="1">
+
+                    <StackPanel
+                        Spacing="16">
+
+                        <TextBlock
+                            Text="Company Registration"
+                            FontSize="20"
+                            FontWeight="SemiBold"/>
+
+                        <ToggleSwitch
+                            x:Name="AllowNewCompanyRegistrationToggle"
+                            Header="Allow New Company Registration"
+                            OnContent="Allowed"
+                            OffContent="Disabled"/>
+
+                        <NumberBox
+                            x:Name="DefaultTrialDurationBox"
+                            Header="Default Trial Duration (Days)"
+                            Minimum="0"
+                            SmallChange="1"/>
+
+                    </StackPanel>
+
+                </Border>
+
+
+                <!-- SYSTEM STATUS -->
+                <Border
+                    Padding="24"
+                    CornerRadius="12"
+                    BorderThickness="1">
+
+                    <StackPanel
+                        Spacing="16">
+
+                        <TextBlock
+                            Text="System Status"
+                            FontSize="20"
+                            FontWeight="SemiBold"/>
+
+                        <ToggleSwitch
+                            x:Name="MaintenanceModeToggle"
+                            Header="Maintenance Mode"
+                            OnContent="Enabled"
+                            OffContent="Disabled"/>
+
+                    </StackPanel>
+
+                </Border>
+
+
+                <!-- SAVE -->
+                <Button
+                    x:Name="SaveButton"
+                    Content="Save Changes"
+                    HorizontalAlignment="Left"
+                    Click="SaveButton_Click"/>
+
+            </StackPanel>
+
+        </Grid>
+
+    </ScrollViewer>
+
+</Page>

@@ -224,6 +224,48 @@ namespace ComputerRepairSystem.infrastructure.Migrations
                     b.ToTable("SubscriptionPlanModules");
                 });
 
+            modelBuilder.Entity("ComputerRepairSystem.domain.Entities.SuperAdminSystemSettings", b =>
+                {
+                    b.Property<int>("SuperAdminSystemSettingsId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SuperAdminSystemSettingsId"));
+
+                    b.Property<bool>("AllowNewCompanyRegistration")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("DefaultTrialDurationInDays")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("MaintenanceMode")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PlatformDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PlatformName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SupportEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SupportPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("SuperAdminSystemSettingsId");
+
+                    b.ToTable("SuperAdminSystemSettings");
+                });
+
             modelBuilder.Entity("ComputerRepairSystem.domain.Entities.TermsAndConditions", b =>
                 {
                     b.Property<int>("TermsAndConditionsId")

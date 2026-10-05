@@ -12,7 +12,7 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />
             <RowDefinition Height="*" />
@@ -159,7 +159,7 @@
                     <!-- HOME -->
                     <NavigationViewItem
                     x:Name="HomeItem"
-                    Content="Home"
+                    Content="Dashboard"
                     IsSelected="True"
                     Tag="home">
                         <NavigationViewItem.Icon>
@@ -381,7 +381,7 @@
                             </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
-                    
+                    <!-- SUBSCRIPTION MANAGEMENT -->
                     <NavigationViewItem 
                     x:Name="SubscriptionManagementItem"
                     Content="Subscription Management"
@@ -389,6 +389,20 @@
                         <NavigationViewItem.Icon>
                             <SymbolIcon Symbol="Tag"/>
                         </NavigationViewItem.Icon>
+                    </NavigationViewItem>
+
+                    <!--  SUPERADMIN SYSTEM SETTINGS -->
+                    <NavigationViewItem
+                        x:Name="SuperAdminSystemSettingsItem"
+                        Content="System Settings"
+                        Tag="super-admin-system-settings">
+
+                        <NavigationViewItem.Icon>
+                            <FontIcon
+                                FontFamily="Segoe MDL2 Assets"
+                                Glyph="&#xE713;"/>
+                        </NavigationViewItem.Icon>
+
                     </NavigationViewItem>
 
                 </NavigationView.MenuItems>
