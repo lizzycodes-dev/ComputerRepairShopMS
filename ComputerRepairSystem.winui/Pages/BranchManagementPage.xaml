@@ -1,0 +1,201 @@
+<Page
+    x:Class="ComputerRepairSystem_winui.Pages.BranchManagementPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid
+        Padding="24"
+        RowSpacing="16">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <StackPanel
+            Grid.Row="0"
+            Spacing="4">
+
+            <TextBlock
+                Text="Branch Management"
+                FontSize="28"
+                FontWeight="SemiBold"/>
+
+            <TextBlock
+                Text="Manage company branches and locations."
+                Opacity="0.7"
+                FontSize="14"/>
+        </StackPanel>
+
+        <!-- TOOLBAR -->
+        <Grid
+            Grid.Row="1"
+            ColumnSpacing="12">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="BranchSearchBox"
+                Grid.Column="0"
+                PlaceholderText="Search branches..."
+                TextChanged="BranchSearchBox_TextChanged"/>
+
+            <Button
+                x:Name="AddBranchButton"
+                Grid.Column="1"
+                Content="Add Branch"
+                Click="AddBranchButton_Click"/>
+
+            <Button
+                x:Name="EditBranchButton"
+                Grid.Column="2"
+                Content="Edit"
+                IsEnabled="False"
+                Click="EditBranchButton_Click"/>
+
+            <Button
+                x:Name="DeleteBranchButton"
+                Grid.Column="3"
+                Content="Delete"
+                IsEnabled="False"
+                Click="DeleteBranchButton_Click"/>
+        </Grid>
+
+        <!-- BRANCH LIST -->
+        <Border
+            Grid.Row="2"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12">
+
+            <Grid>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- COLUMN HEADERS -->
+                <Grid
+                    Grid.Row="0"
+                    Padding="12"
+                    ColumnSpacing="12">
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="130"/>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="100"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Grid.Column="0"
+                        Text="Branch Code"
+                        FontWeight="SemiBold"/>
+
+                    <TextBlock
+                        Grid.Column="1"
+                        Text="Branch Name"
+                        FontWeight="SemiBold"/>
+
+                    <TextBlock
+                        Grid.Column="2"
+                        Text="Address"
+                        FontWeight="SemiBold"/>
+
+                    <TextBlock
+                        Grid.Column="3"
+                        Text="Phone"
+                        FontWeight="SemiBold"/>
+
+                    <TextBlock
+                        Grid.Column="4"
+                        Text="Email"
+                        FontWeight="SemiBold"/>
+
+                    <TextBlock
+                        Grid.Column="5"
+                        Text="Status"
+                        FontWeight="SemiBold"/>
+                </Grid>
+
+                <!-- LIST -->
+                <ListView
+                    x:Name="BranchesListView"
+                    Grid.Row="1"
+                    SelectionMode="Single"
+                    SelectionChanged="BranchesListView_SelectionChanged">
+
+                    <ListView.ItemTemplate>
+
+                        <DataTemplate>
+
+                            <Grid
+                                Padding="12"
+                                ColumnSpacing="12">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="100"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock
+                                    Grid.Column="0"
+                                    Text="{Binding BranchCode}"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="{Binding BranchName}"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="{Binding Address}"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="{Binding Phone}"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="4"
+                                    Text="{Binding Email}"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="5"
+                                    Text="{Binding Status}"/>
+
+                            </Grid>
+
+                        </DataTemplate>
+
+                    </ListView.ItemTemplate>
+
+                </ListView>
+
+            </Grid>
+
+        </Border>
+
+    </Grid>
+
+</Page>

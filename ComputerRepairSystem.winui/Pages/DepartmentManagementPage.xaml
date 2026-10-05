@@ -1,0 +1,167 @@
+<Page
+    x:Class="ComputerRepairSystem_winui.Pages.DepartmentManagementPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid
+        Padding="24"
+        RowSpacing="16">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <StackPanel
+            Grid.Row="0"
+            Spacing="4">
+
+            <TextBlock
+                Text="Department Management"
+                FontSize="28"
+                FontWeight="SemiBold"/>
+
+            <TextBlock
+                Text="Manage company departments and organizational units."
+                FontSize="14"
+                Opacity="0.7"/>
+        </StackPanel>
+
+        <!-- TOOLBAR -->
+        <Grid
+            Grid.Row="1"
+            ColumnSpacing="12">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="DepartmentSearchBox"
+                Grid.Column="0"
+                PlaceholderText="Search departments..."
+                TextChanged="DepartmentSearchBox_TextChanged"/>
+
+            <Button
+                x:Name="AddDepartmentButton"
+                Grid.Column="1"
+                Content="Add Department"
+                Click="AddDepartmentButton_Click"/>
+
+            <Button
+                x:Name="EditDepartmentButton"
+                Grid.Column="2"
+                Content="Edit"
+                IsEnabled="False"
+                Click="EditDepartmentButton_Click"/>
+
+            <Button
+                x:Name="DeleteDepartmentButton"
+                Grid.Column="3"
+                Content="Delete"
+                IsEnabled="False"
+                Click="DeleteDepartmentButton_Click"/>
+
+        </Grid>
+
+        <!-- DEPARTMENT LIST -->
+        <Border
+            Grid.Row="2"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12">
+
+            <Grid>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- COLUMN HEADERS -->
+                <Grid
+                    Grid.Row="0"
+                    Padding="12"
+                    ColumnSpacing="12">
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="100"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Grid.Column="0"
+                        Text="Department Name"
+                        FontWeight="SemiBold"/>
+
+                    <TextBlock
+                        Grid.Column="1"
+                        Text="Description"
+                        FontWeight="SemiBold"/>
+
+                    <TextBlock
+                        Grid.Column="2"
+                        Text="Status"
+                        FontWeight="SemiBold"/>
+
+                </Grid>
+
+                <!-- DEPARTMENTS -->
+                <ListView
+                    x:Name="DepartmentsListView"
+                    Grid.Row="1"
+                    SelectionMode="Single"
+                    SelectionChanged="DepartmentsListView_SelectionChanged">
+
+                    <ListView.ItemTemplate>
+
+                        <DataTemplate>
+
+                            <Grid
+                                Padding="12"
+                                ColumnSpacing="12">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="100"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock
+                                    Grid.Column="0"
+                                    Text="{Binding DepartmentName}"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="{Binding Description}"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="{Binding Status}"/>
+
+                            </Grid>
+
+                        </DataTemplate>
+
+                    </ListView.ItemTemplate>
+
+                </ListView>
+
+            </Grid>
+
+        </Border>
+
+    </Grid>
+
+</Page>

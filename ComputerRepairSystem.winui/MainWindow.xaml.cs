@@ -101,7 +101,7 @@ public sealed partial class MainWindow : Window
         AttendanceManagementItem.Visibility =
             Visibility.Collapsed;
 
-        PayrollManagementItem.Visibility =
+        PayrollManagementItem.Visibility =  
             Visibility.Collapsed;
 
         FinanceManagementItem.Visibility =
@@ -122,6 +122,12 @@ public sealed partial class MainWindow : Window
         MySubscriptionItem.Visibility =
             Visibility.Collapsed;
 
+        BranchManagementItem.Visibility =
+            Visibility.Collapsed;
+
+        DepartmentManagementItem.Visibility =
+            Visibility.Collapsed;
+
         var role =
             CurrentUser.Role;
 
@@ -132,6 +138,9 @@ public sealed partial class MainWindow : Window
 
         if (role == "Super Admin")
         {
+            HomeItem.Visibility =
+                Visibility.Visible;
+
             UserManagementItem.Visibility =
                 Visibility.Visible;
 
@@ -141,13 +150,16 @@ public sealed partial class MainWindow : Window
             SubscriptionManagementItem.Visibility =
                 Visibility.Visible;
 
-            CompanyManagementItem.IsSelected =
+            TermsAndConditionItem.Visibility =
+                Visibility.Visible;
+
+            HomeItem.IsSelected =
                 true;
 
             NavFrame.Content =
                 App.Services
                     .GetRequiredService<
-                        CompanyManagementPage>();
+                        HomePage>();
 
             return;
         }
@@ -205,6 +217,12 @@ public sealed partial class MainWindow : Window
                 Visibility.Visible;
 
             MySubscriptionItem.Visibility =
+                Visibility.Visible;
+
+            BranchManagementItem.Visibility =
+                Visibility.Visible;
+
+            DepartmentManagementItem.Visibility =
                 Visibility.Visible;
 
             HomeItem.IsSelected =
@@ -748,6 +766,12 @@ public sealed partial class MainWindow : Window
         MySubscriptionItem.Visibility =
             Visibility.Collapsed;
 
+        BranchManagementItem.Visibility =
+            Visibility.Collapsed;
+
+        DepartmentManagementItem.Visibility =
+            Visibility.Collapsed;
+
         HomeItem.IsSelected = false;
 
         NavFrame.Content =
@@ -845,6 +869,14 @@ public sealed partial class MainWindow : Window
                 case "purchase-management":
                     NavigateToPurchaseManagementPage();
                     break;
+
+                case "branch-management":
+                    NavigateToBranchManagementPage();
+                    break;
+
+                case "department-management":
+                    NavigateToDepartmentManagementPage();
+                    break;
             }
         }
     }
@@ -865,7 +897,7 @@ public sealed partial class MainWindow : Window
     }
 
 
-    private void NavigateToUserManagementPage()
+    public void NavigateToUserManagementPage()
     {
         var page =
             App.Services
@@ -1075,7 +1107,7 @@ public sealed partial class MainWindow : Window
     // COMPANY MANAGEMENT
     // ==========================================
 
-    private void NavigateToCompanyManagementPage()
+    public void NavigateToCompanyManagementPage()
     {
         var page =
             App.Services
@@ -1165,7 +1197,7 @@ public sealed partial class MainWindow : Window
     // TERMS AND CONDITIONS
     // ==========================================
 
-    private void NavigateToTermsAndConditionsPage()
+    public void NavigateToTermsAndConditionsPage()
     {
         var page =
             App.Services
@@ -1217,4 +1249,29 @@ public sealed partial class MainWindow : Window
 
         NavFrame.Content = page;
     }
+
+    // ==========================================
+    // MY SUBSCRIPTION
+    // ==========================================
+
+    private void NavigateToBranchManagementPage()
+    {
+        var page =
+            App.Services
+                .GetRequiredService<
+                    BranchManagementPage>();
+
+        NavFrame.Content = page;
+    }
+
+    private void NavigateToDepartmentManagementPage()
+    {
+        var page =
+            App.Services
+                .GetRequiredService<
+                    DepartmentManagementPage>();
+
+        NavFrame.Content = page;
+    }
 }
+

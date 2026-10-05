@@ -249,6 +249,33 @@
 
                     </NavigationViewItem>
 
+                    <!-- BRANCH MANAGEMENT -->
+                    <NavigationViewItem
+                        x:Name="BranchManagementItem"
+                        Content="Branch Management"
+                        Tag="branch-management">
+                        <NavigationViewItem.Icon>
+                            <FontIcon
+                                FontFamily="Segoe MDL2 Assets"
+                                Glyph="&#xE707;"/>
+                        </NavigationViewItem.Icon>
+
+                    </NavigationViewItem>
+                    
+                    <!-- DEPARTMENT MANAGEMENT -->
+                    <NavigationViewItem
+                        x:Name="DepartmentManagementItem"
+                        Content="Department Management"
+                        Tag="department-management">
+
+                        <NavigationViewItem.Icon>
+                            <FontIcon
+                                FontFamily="Segoe MDL2 Assets"
+                                Glyph="&#xE902;"/>
+                        </NavigationViewItem.Icon>
+
+                    </NavigationViewItem>
+                    
                     <!-- ATTENDANCE MANAGEMENT -->
                     <NavigationViewItem
                     x:Name="AttendanceManagementItem"
@@ -333,6 +360,7 @@
 
                     </NavigationViewItem>
 
+                    
                     <!-- SYSTEM SETTINGS -->
                     <NavigationViewItem
                     x:Name="SystemSettingsItem"
@@ -342,7 +370,6 @@
                             <SymbolIcon Symbol="Setting"/>
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
-                    
 
                     <!-- TERMS AND CONDITIONS -->
                     <NavigationViewItem

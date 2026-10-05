@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ComputerRepairSystem_winui.Pages;
 
@@ -16,18 +17,93 @@ public sealed partial class HomePage : Page
     private readonly TenantDbContextFactory
         _tenantDbFactory;
 
+    private readonly MasterErpDbContext
+        _masterDb;
     public HomePage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb)
     {
         InitializeComponent();
 
         _tenantDbFactory =
             tenantDbFactory;
 
+        _masterDb =
+            masterDb;
+
         Loaded += HomePage_Loaded;
     }
+    private async Task LoadProfitVsExpensesAsync(TenantDbContext db)
+    {
+        var startOfMonth =
+            new DateTime(
+                DateTime.Today.Year,
+                DateTime.Today.Month,
+                1);
 
+        var startOfNextMonth =
+            startOfMonth.AddMonths(1);
 
+        // Completed sales
+        var revenue =
+            await db.Payments
+                .AsNoTracking()
+                .Where(p =>
+                    p.Status == "Completed" &&
+                    p.PaymentDate >= startOfMonth &&
+                    p.PaymentDate < startOfNextMonth)
+                .Select(p => (decimal?)p.Amount)
+                .SumAsync() ?? 0;
+
+        // Expenses
+        var expenses =
+            await db.Expenses
+                .AsNoTracking()
+                .Where(e =>
+                    e.ExpenseDate >= startOfMonth &&
+                    e.ExpenseDate < startOfNextMonth)
+                .Select(e => (decimal?)e.Amount)
+                .SumAsync() ?? 0;
+
+        var profit = revenue - expenses;
+
+        ProfitTextBlock.Text = $"₱{profit:N2}";
+        RevenueTextBlock.Text = $"₱{revenue:N2}";
+        ExpensesTextBlock.Text = $"₱{expenses:N2}";
+    }
+    private async void SalesTrendPeriodComboBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        if (CurrentUser.Role == "Super Admin")
+        {
+            return;
+        }
+
+        if (CurrentUser.CompanyId == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
+
+            await LoadSalesTrendsAsync(db);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "Failed to load sales trends: " + ex);
+        }
+    }
     // ==========================================
     // PAGE LOADED
     // ==========================================
@@ -38,7 +114,52 @@ public sealed partial class HomePage : Page
     {
         await LoadDashboardAsync();
     }
+    private void ManageCompaniesButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var mainWindow =
+            App.Services
+                .GetRequiredService<MainWindow>();
 
+        mainWindow.NavigateToCompanyManagementPage();
+    }
+
+
+    private void ManageUsersButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var mainWindow =
+            App.Services
+                .GetRequiredService<MainWindow>();
+
+        mainWindow.NavigateToUserManagementPage();
+    }
+
+
+    private void ManageSubscriptionPlansButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var mainWindow =
+            App.Services
+                .GetRequiredService<MainWindow>();
+
+        mainWindow.NavigateToSubscriptionManagementPage();
+    }
+
+
+    private void ManageTermsButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var mainWindow =
+            App.Services
+                .GetRequiredService<MainWindow>();
+
+        mainWindow.NavigateToTermsAndConditionsPage();
+    }
 
     // ==========================================
     // LOAD DASHBOARD
@@ -48,6 +169,12 @@ public sealed partial class HomePage : Page
     {
         try
         {
+            if (CurrentUser.Role == "Super Admin")
+            {
+                await LoadSuperAdminDashboardAsync();
+                return;
+            }
+
             if (CurrentUser.CompanyId == null)
             {
                 return;
@@ -149,7 +276,12 @@ public sealed partial class HomePage : Page
             // ==========================================
 
             await LoadRepairOverviewAsync(db);
+            await LoadProfitVsExpensesAsync(db);
+            // ==========================================
+            // SALES TRENDS
+            // ==========================================
 
+            await LoadSalesTrendsAsync(db);
 
             // ==========================================
             // RECENT REPAIRS
@@ -192,8 +324,952 @@ public sealed partial class HomePage : Page
                 ex);
         }
     }
+    // ==========================================
+    // SALES TRENDS
+    // ==========================================
+
+    private async Task LoadSalesTrendsAsync(
+        TenantDbContext db)
+    {
+        var period =
+            SalesTrendPeriodComboBox.SelectedIndex;
+
+        // ==========================================
+        // WEEKLY
+        // ==========================================
+
+        if (period == 0)
+        {
+            var today =
+                DateTime.Today;
+
+            var startDate =
+                today.AddDays(-6);
+
+            var endDate =
+                today.AddDays(1);
+
+            var payments =
+                await db.Payments
+                    .AsNoTracking()
+                    .Where(p =>
+                        p.Status == "Completed" &&
+                        p.PaymentDate >= startDate &&
+                        p.PaymentDate < endDate)
+                    .Select(p => new
+                    {
+                        p.PaymentDate,
+                        p.Amount
+                    })
+                    .ToListAsync();
 
 
+            var dailySales =
+                new List<decimal>();
+
+
+            for (int i = 0; i < 7; i++)
+            {
+                var date =
+                    startDate.AddDays(i);
+
+                var total =
+                    payments
+                        .Where(p =>
+                            p.PaymentDate.Date == date.Date)
+                        .Sum(p => p.Amount);
+
+                dailySales.Add(total);
+            }
+
+
+            var labels =
+                Enumerable
+                    .Range(0, 7)
+                    .Select(i =>
+                        startDate
+                            .AddDays(i)
+                            .ToString("ddd"))
+                    .ToList();
+
+
+            DrawSalesTrendGraph(
+                dailySales,
+                labels);
+
+            return;
+        }
+
+
+        // ==========================================
+        // MONTHLY
+        // ==========================================
+
+        if (period == 1)
+        {
+            var currentMonth =
+                new DateTime(
+                    DateTime.Today.Year,
+                    DateTime.Today.Month,
+                    1);
+
+            var startMonth =
+                currentMonth.AddMonths(-5);
+
+            var endMonth =
+                currentMonth.AddMonths(1);
+
+
+            var payments =
+                await db.Payments
+                    .AsNoTracking()
+                    .Where(p =>
+                        p.Status == "Completed" &&
+                        p.PaymentDate >= startMonth &&
+                        p.PaymentDate < endMonth)
+                    .Select(p => new
+                    {
+                        p.PaymentDate,
+                        p.Amount
+                    })
+                    .ToListAsync();
+
+
+            var monthlySales =
+                new List<decimal>();
+
+            var labels =
+                new List<string>();
+
+
+            for (int i = 0; i < 6; i++)
+            {
+                var month =
+                    startMonth.AddMonths(i);
+
+                var total =
+                    payments
+                        .Where(p =>
+                            p.PaymentDate.Year == month.Year &&
+                            p.PaymentDate.Month == month.Month)
+                        .Sum(p => p.Amount);
+
+                monthlySales.Add(total);
+
+                labels.Add(
+                    month.ToString("MMM"));
+            }
+
+
+            DrawSalesTrendGraph(
+                monthlySales,
+                labels);
+
+            return;
+        }
+
+
+        // ==========================================
+        // YEARLY
+        // ==========================================
+
+        var currentYear =
+            DateTime.Today.Year;
+
+        var startYear =
+            currentYear - 4;
+
+
+        var paymentsYearly =
+            await db.Payments
+                .AsNoTracking()
+                .Where(p =>
+                    p.Status == "Completed" &&
+                    p.PaymentDate.Year >= startYear &&
+                    p.PaymentDate.Year <= currentYear)
+                .Select(p => new
+                {
+                    p.PaymentDate,
+                    p.Amount
+                })
+                .ToListAsync();
+
+
+        var yearlySales =
+            new List<decimal>();
+
+        var yearlyLabels =
+            new List<string>();
+
+
+        for (int year = startYear;
+             year <= currentYear;
+             year++)
+        {
+            var total =
+                paymentsYearly
+                    .Where(p =>
+                        p.PaymentDate.Year == year)
+                    .Sum(p => p.Amount);
+
+            yearlySales.Add(total);
+
+            yearlyLabels.Add(
+                year.ToString());
+        }
+
+
+        DrawSalesTrendGraph(
+            yearlySales,
+            yearlyLabels);
+    }
+    // ==========================================
+    // LOAD SUPER ADMIN DASHBOARD
+    // ==========================================
+
+    private async Task LoadSuperAdminDashboardAsync()
+    {
+        // Show Super Admin dashboard
+        SuperAdminDashboard.Visibility =
+            Visibility.Visible;
+
+        // Hide regular company dashboard
+        CompanyDashboard.Visibility =
+            Visibility.Collapsed;
+
+
+        // ==========================================
+        // COMPANIES
+        // ==========================================
+
+        var companies =
+            await _masterDb.Companies
+                .AsNoTracking()
+                .ToListAsync();
+
+
+        var totalCompanies =
+            companies.Count;
+
+
+        // ==========================================
+        // USERS
+        // ==========================================
+
+        var totalUsers =
+            await _masterDb.Users
+                .AsNoTracking()
+                .CountAsync();
+
+
+        // ==========================================
+        // SUBSCRIPTIONS
+        // ==========================================
+
+        var totalSubscriptions =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .CountAsync();
+
+
+        var activeSubscriptions =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .CountAsync(s =>
+                    s.Status == "Active");
+
+
+        // ==========================================
+        // UPDATE KPI CARDS
+        // ==========================================
+
+        SuperAdminTotalCompaniesText.Text =
+            totalCompanies.ToString();
+
+        SuperAdminTotalUsersText.Text =
+            totalUsers.ToString();
+
+        SuperAdminTotalSubscriptionsText.Text =
+            totalSubscriptions.ToString();
+
+        SuperAdminActiveSubscriptionsText.Text =
+            activeSubscriptions.ToString();
+
+        // ==========================================
+        // COMPANY CLASSIFICATION COUNTS
+        // ==========================================
+
+        var companyTypeCounts =
+            await (
+                from subscription in _masterDb.Subscriptions.AsNoTracking()
+
+                join company in _masterDb.Companies.AsNoTracking()
+                    on subscription.CompanyId
+                    equals company.CompanyId
+
+                join plan in _masterDb.SubscriptionPlans.AsNoTracking()
+                    on subscription.SubscriptionPlanId
+                    equals plan.SubscriptionPlanId
+
+                where company.IsActive
+                      && subscription.Status == "Active"
+
+                group company by plan.EnterpriseType
+                into companyGroup
+
+                select new
+                {
+                    EnterpriseType = companyGroup.Key,
+
+                    CompanyCount =
+                        companyGroup
+                            .Select(c => c.CompanyId)
+                            .Distinct()
+                            .Count()
+                }
+            )
+            .ToListAsync();
+
+
+        // Get counts
+        var microCount =
+            companyTypeCounts
+                .FirstOrDefault(x =>
+                    x.EnterpriseType == "Micro")
+                ?.CompanyCount ?? 0;
+
+        var smallCount =
+            companyTypeCounts
+                .FirstOrDefault(x =>
+                    x.EnterpriseType == "Small")
+                ?.CompanyCount ?? 0;
+
+        var mediumCount =
+            companyTypeCounts
+                .FirstOrDefault(x =>
+                    x.EnterpriseType == "Medium")
+                ?.CompanyCount ?? 0;
+        // ==========================================
+        // SUBSCRIPTION GRAPH
+        // ==========================================
+
+        var subscriptionGraphMaximum =
+            Math.Max(
+                Math.Max(microCount, smallCount),
+                mediumCount);
+
+        if (subscriptionGraphMaximum == 0)
+        {
+            subscriptionGraphMaximum = 1;
+        }
+
+
+        // Set graph maximum
+        MicroSubscriptionProgress.Maximum =
+            subscriptionGraphMaximum;
+
+        SmallSubscriptionProgress.Maximum =
+            subscriptionGraphMaximum;
+
+        MediumSubscriptionProgress.Maximum =
+            subscriptionGraphMaximum;
+
+
+        // Set graph values
+        MicroSubscriptionProgress.Value =
+            microCount;
+
+        SmallSubscriptionProgress.Value =
+            smallCount;
+
+        MediumSubscriptionProgress.Value =
+            mediumCount;
+
+
+        // Set count labels
+        MicroSubscriptionCountText.Text =
+            microCount.ToString();
+
+        SmallSubscriptionCountText.Text =
+            smallCount.ToString();
+
+        MediumSubscriptionCountText.Text =
+            mediumCount.ToString();
+
+        // Update UI
+        MicroCompaniesCountText.Text =
+            $"{microCount} {(microCount == 1 ? "company" : "companies")}";
+
+        SmallCompaniesCountText.Text =
+            $"{smallCount} {(smallCount == 1 ? "company" : "companies")}";
+
+        MediumCompaniesCountText.Text =
+            $"{mediumCount} {(mediumCount == 1 ? "company" : "companies")}";
+        // ==========================================
+        // RECENT COMPANIES
+        // ==========================================
+
+        var recentCompanies =
+            await (
+                from company in _masterDb.Companies.AsNoTracking()
+
+                join subscription in _masterDb.Subscriptions.AsNoTracking()
+                    on company.CompanyId
+                    equals subscription.CompanyId
+                    into subscriptionGroup
+
+                from subscription in subscriptionGroup
+                    .OrderByDescending(s => s.StartDate)
+                    .Take(1)
+                    .DefaultIfEmpty()
+
+                join plan in _masterDb.SubscriptionPlans.AsNoTracking()
+                    on subscription.SubscriptionPlanId
+                    equals plan.SubscriptionPlanId
+                    into planGroup
+
+                from plan in planGroup
+                    .DefaultIfEmpty()
+
+                orderby company.CreatedAt descending
+
+                select new RecentCompanyDisplayItem
+                {
+                    CompanyName = company.CompanyName,
+                    CompanyCode = company.CompanyCode,
+
+                    EnterpriseType =
+                        plan != null
+                            ? plan.EnterpriseType
+                            : "No Subscription",
+
+                    CreatedAt = company.CreatedAt
+                }
+            )
+            .Take(5)
+            .ToListAsync();
+
+
+        RecentCompaniesListView.ItemsSource =
+            recentCompanies;
+        // ==========================================
+        // USERS OVERVIEW
+        // ==========================================
+
+        var users =
+            await _masterDb.Users
+                .AsNoTracking()
+                .Include(u => u.Company)
+                .ToListAsync();
+
+
+        // ==========================================
+        // USER COUNTS
+        // ==========================================
+
+        var totalSystemUsers =
+            users.Count;
+
+        var activeSystemUsers =
+            users.Count(u => u.IsActive);
+
+
+        // ==========================================
+        // GET USER ROLES
+        // ==========================================
+
+        var userRoles =
+            await (
+                from userRole in _masterDb.UserRoles.AsNoTracking()
+
+                join role in _masterDb.Roles.AsNoTracking()
+                    on userRole.RoleId equals role.Id
+
+                select new
+                {
+                    userRole.UserId,
+                    RoleName = role.Name ?? "No Role"
+                }
+            )
+            .ToListAsync();
+
+
+        // ==========================================
+        // ADMIN USER COUNT
+        // ==========================================
+
+        var adminUserIds =
+            userRoles
+                .Where(x =>
+                    x.RoleName == "Super Admin" ||
+                    x.RoleName == "Admin")
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToHashSet();
+
+        var adminUserCount =
+            adminUserIds.Count;
+
+
+        // ==========================================
+        // STAFF USER COUNT
+        // ==========================================
+
+        var staffUserCount =
+            users.Count -
+            adminUserCount;
+
+
+        // ==========================================
+        // UPDATE USER KPI CARDS
+        // ==========================================
+
+        SuperAdminUsersTotalText.Text =
+            totalSystemUsers.ToString();
+
+        SuperAdminActiveUsersText.Text =
+            activeSystemUsers.ToString();
+
+        SuperAdminAdminUsersText.Text =
+            adminUserCount.ToString();
+
+        SuperAdminStaffUsersText.Text =
+            staffUserCount.ToString();
+
+
+        // ==========================================
+        // USERS BY ROLE
+        // ==========================================
+
+        var roleSummary =
+            userRoles
+                .GroupBy(x => x.RoleName)
+                .OrderBy(g => g.Key)
+                .Select(g =>
+                    $"{g.Key}: {g.Select(x => x.UserId).Distinct().Count()}")
+                .ToList();
+
+        SuperAdminUserRoleSummaryText.Text =
+            roleSummary.Count > 0
+                ? string.Join("   •   ", roleSummary)
+                : "No roles assigned.";
+
+        // ==========================================
+        // USER LIST
+        // ==========================================
+
+        var userDisplayItems =
+            users
+                .Select(user =>
+                {
+                    var role =
+                        userRoles
+                            .FirstOrDefault(x =>
+                                x.UserId == user.Id)
+                            ?.RoleName
+                        ?? "No Role";
+
+                    return new SuperAdminUserDisplayItem
+                    {
+                        UserName =
+                            user.UserName ?? string.Empty,
+
+                        Email =
+                            user.Email ?? string.Empty,
+
+                        Role =
+                            role,
+
+                        CompanyName =
+                            user.Company?.CompanyName
+                            ?? "System",
+
+                        Status =
+                            user.IsActive
+                                ? "Active"
+                                : "Inactive",
+
+                        LastLogin =
+                            user.LastLogin
+                    };
+                })
+                .OrderBy(x => x.UserName)
+                .ToList();
+
+
+        SuperAdminUsersListView.ItemsSource =
+            userDisplayItems;
+        // ==========================================
+        // RECENT SUBSCRIPTIONS
+        // ==========================================
+
+        var recentSubscriptions =
+            await (
+                from subscription in _masterDb.Subscriptions.AsNoTracking()
+
+                join company in _masterDb.Companies.AsNoTracking()
+                    on subscription.CompanyId
+                    equals company.CompanyId
+
+                join plan in _masterDb.SubscriptionPlans.AsNoTracking()
+                    on subscription.SubscriptionPlanId
+                    equals plan.SubscriptionPlanId
+
+                orderby subscription.StartDate descending
+
+                select new SuperAdminSubscriptionDisplayItem
+                {
+                    CompanyName =
+                        company.CompanyName,
+
+                    PlanName =
+                        plan.PlanName,
+
+                    EnterpriseType =
+                        plan.EnterpriseType,
+
+                    Price =
+                        plan.Price,
+
+                    Status =
+                        subscription.Status,
+
+                    StartDate =
+                        subscription.StartDate,
+
+                    EndDate =
+                        subscription.EndDate
+                }
+            )
+            .Take(5)
+            .ToListAsync();
+
+
+        RecentSubscriptionsListView.ItemsSource =
+            recentSubscriptions;
+    }
+
+    // ==========================================
+    // DRAW SALES TREND GRAPH
+    // ==========================================
+
+    private void DrawSalesTrendGraph(
+        List<decimal> values,
+        List<string> labels)
+    {
+        SalesTrendGraphContainer.Children.Clear();
+
+
+        if (values.Count == 0)
+        {
+            return;
+        }
+
+
+        var graph =
+            new Canvas
+            {
+                Height = 170,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+
+        var graphWidth =
+            Math.Max(
+                400,
+                SalesTrendGraphContainer.ActualWidth - 20);
+
+
+        graph.Width =
+            graphWidth;
+
+
+        var graphHeight =
+            170.0;
+
+        var leftMargin =
+            55.0;
+
+        var rightMargin =
+            15.0;
+
+        var topMargin =
+            10.0;
+
+        var bottomMargin =
+            28.0;
+
+
+        var plotWidth =
+            graphWidth -
+            leftMargin -
+            rightMargin;
+
+        var plotHeight =
+            graphHeight -
+            topMargin -
+            bottomMargin;
+
+
+        // ==========================================
+        // MAX VALUE
+        // ==========================================
+
+        var maxValue =
+            values.Max();
+
+
+        if (maxValue <= 0)
+        {
+            maxValue = 1;
+        }
+
+
+        var orangeBrush =
+            (Brush)Resources["AccentOrangeBrush"];
+
+
+        var gridBrush =
+            new SolidColorBrush(
+                Windows.UI.Color.FromArgb(
+                    45,
+                    255,
+                    255,
+                    255));
+
+
+        var textBrush =
+            new SolidColorBrush(
+                Windows.UI.Color.FromArgb(
+                    150,
+                    255,
+                    255,
+                    255));
+
+
+        // ==========================================
+        // HORIZONTAL GRID LINES
+        // ==========================================
+
+        for (int i = 0; i <= 4; i++)
+        {
+            var ratio =
+                i / 4.0;
+
+            var y =
+                topMargin +
+                plotHeight -
+                (plotHeight * ratio);
+
+
+            var line =
+                new Line
+                {
+                    X1 = leftMargin,
+                    X2 = graphWidth - rightMargin,
+                    Y1 = y,
+                    Y2 = y,
+                    Stroke = gridBrush,
+                    StrokeThickness = 1
+                };
+
+
+            graph.Children.Add(line);
+
+
+            // Y-axis value
+
+            var axisValue =
+                maxValue *
+                (decimal)ratio;
+
+
+            var valueText =
+                new TextBlock
+                {
+                    Text =
+                        $"₱{axisValue:N0}",
+
+                    FontSize = 10,
+                    Foreground = textBrush
+                };
+
+
+            Canvas.SetLeft(
+                valueText,
+                0);
+
+            Canvas.SetTop(
+                valueText,
+                Math.Max(
+                    0,
+                    y - 7));
+
+
+            graph.Children.Add(
+                valueText);
+        }
+
+
+        // ==========================================
+        // GRAPH POINTS
+        // ==========================================
+
+        var points =
+            new PointCollection();
+
+
+        var pointCount =
+            values.Count;
+
+
+        for (int i = 0;
+             i < pointCount;
+             i++)
+        {
+            var x =
+                pointCount == 1
+                    ? leftMargin + plotWidth / 2
+                    : leftMargin +
+                      (plotWidth /
+                       (pointCount - 1) *
+                       i);
+
+
+            var ratio =
+                (double)(
+                    values[i] /
+                    maxValue);
+
+
+            var y =
+                topMargin +
+                plotHeight -
+                (plotHeight * ratio);
+
+
+            points.Add(
+                new Point(
+                    x,
+                    y));
+
+
+            // ==================================
+            // DATA POINT
+            // ==================================
+
+            var point =
+                new Ellipse
+                {
+                    Width = 8,
+                    Height = 8,
+                    Fill = orangeBrush
+                };
+
+
+            Canvas.SetLeft(
+                point,
+                x - 4);
+
+            Canvas.SetTop(
+                point,
+                y - 4);
+
+
+            graph.Children.Add(point);
+
+
+            // ==================================
+            // VALUE LABEL
+            // ==================================
+
+            var valueText =
+                new TextBlock
+                {
+                    Text =
+                        $"₱{values[i]:N0}",
+
+                    FontSize = 10,
+                    Foreground = textBrush
+                };
+
+
+            Canvas.SetLeft(
+                valueText,
+                Math.Max(
+                    leftMargin,
+                    x - 22));
+
+            Canvas.SetTop(
+                valueText,
+                Math.Max(
+                    0,
+                    y - 22));
+
+
+            graph.Children.Add(
+                valueText);
+
+
+            // ==================================
+            // X-AXIS LABEL
+            // ==================================
+
+            var labelText =
+                new TextBlock
+                {
+                    Text =
+                        labels[i],
+
+                    FontSize = 11,
+                    Foreground = textBrush
+                };
+
+
+            Canvas.SetLeft(
+                labelText,
+                Math.Max(
+                    leftMargin - 10,
+                    x - 15));
+
+            Canvas.SetTop(
+                labelText,
+                graphHeight - 20);
+
+
+            graph.Children.Add(
+                labelText);
+        }
+
+
+        // ==========================================
+        // CONNECT POINTS
+        // ==========================================
+
+        var polyline =
+            new Polyline
+            {
+                Points = points,
+                Stroke = orangeBrush,
+                StrokeThickness = 3,
+                StrokeLineJoin =
+                    PenLineJoin.Round
+            };
+
+
+        graph.Children.Add(
+            polyline);
+
+
+        Canvas.SetZIndex(
+            polyline,
+            10);
+
+
+        SalesTrendGraphContainer.Children.Add(
+            graph);
+    }
     // ==========================================
     // REPAIR STATUS
     // ==========================================
@@ -889,5 +1965,83 @@ public sealed partial class HomePage : Page
 
         public string AmountText { get; set; }
             = string.Empty;
+    }
+    // ==========================================
+    // RECENT COMPANY DISPLAY MODEL
+    // ==========================================
+
+    public class RecentCompanyDisplayItem
+    {
+        public string CompanyName { get; set; }
+            = string.Empty;
+
+        public string CompanyCode { get; set; }
+            = string.Empty;
+
+        public string EnterpriseType { get; set; }
+            = string.Empty;
+
+        public DateTime CreatedAt { get; set; }
+
+        public string CreatedAtText =>
+            CreatedAt.ToString("MMM dd, yyyy");
+    }
+    // ==========================================
+    // SUPER ADMIN USER DISPLAY MODEL
+    // ==========================================
+
+    public class SuperAdminUserDisplayItem
+    {
+        public string UserName { get; set; }
+            = string.Empty;
+
+        public string Email { get; set; }
+            = string.Empty;
+
+        public string Role { get; set; }
+            = string.Empty;
+
+        public string CompanyName { get; set; }
+            = "System";
+
+        public string Status { get; set; }
+            = string.Empty;
+
+        public DateTime? LastLogin { get; set; }
+    }
+    // ==========================================
+    // SUPER ADMIN SUBSCRIPTION DISPLAY MODEL
+    // ==========================================
+
+    public class SuperAdminSubscriptionDisplayItem
+    {
+        public string CompanyName { get; set; }
+            = string.Empty;
+
+        public string PlanName { get; set; }
+            = string.Empty;
+
+        public string EnterpriseType { get; set; }
+            = string.Empty;
+
+        public decimal Price { get; set; }
+
+        public string PriceText =>
+            $"₱{Price:N2}";
+
+        public string Status { get; set; }
+            = string.Empty;
+
+        public DateTime StartDate { get; set; }
+
+        public DateTime? EndDate { get; set; }
+
+        public string StartDateText =>
+            StartDate.ToString("MMM dd, yyyy");
+
+        public string EndDateText =>
+            EndDate.HasValue
+                ? $"Ends {EndDate.Value:MMM dd, yyyy}"
+                : "No end date";
     }
 }

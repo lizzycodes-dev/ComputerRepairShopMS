@@ -224,6 +224,40 @@ namespace ComputerRepairSystem.infrastructure.Migrations
                     b.ToTable("SubscriptionPlanModules");
                 });
 
+            modelBuilder.Entity("ComputerRepairSystem.domain.Entities.TermsAndConditions", b =>
+                {
+                    b.Property<int>("TermsAndConditionsId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TermsAndConditionsId"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("TermsAndConditionsId");
+
+                    b.ToTable("TermsAndConditions");
+                });
+
             modelBuilder.Entity("ComputerRepairSystem.infrastructure.Entities.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")

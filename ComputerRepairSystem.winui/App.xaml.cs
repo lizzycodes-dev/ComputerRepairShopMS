@@ -155,6 +155,9 @@ public partial class App : Application
 
         services.AddTransient<MySubscriptionPage>();
 
+        services.AddTransient<BranchManagementPage>();
+
+        services.AddTransient<DepartmentManagementPage>();
         // ==========================================
         // MAIN WINDOW
         // ==========================================

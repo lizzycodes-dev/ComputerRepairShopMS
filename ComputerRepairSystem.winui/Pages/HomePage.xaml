@@ -43,694 +43,396 @@
         VerticalScrollBarVisibility="Auto">
 
         <Grid
-            Padding="28"
-            RowSpacing="18">
-
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+            Padding="28">
 
 
-            <!-- ====================================== -->
-            <!-- HEADER -->
-            <!-- ====================================== -->
+            <!-- ===================================================== -->
+            <!-- COMPANY DASHBOARD -->
+            <!-- ===================================================== -->
 
             <Grid
-                Grid.Row="0"
-                Margin="0,0,0,4">
+                x:Name="CompanyDashboard"
+                Visibility="Visible">
 
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-
-                <StackPanel
-                    Spacing="4">
-
-                    <TextBlock
-                        Text="Dashboard"
-                        FontSize="32"
-                        FontWeight="SemiBold"/>
-
-                    <TextBlock
-                        x:Name="ShopNameText"
-                        Text="Computer Repair Shop"
-                        FontSize="15"
-                        Opacity="0.7"/>
-
-                </StackPanel>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
 
-                <StackPanel
-                    Grid.Column="1"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Spacing="2">
+                <!-- ====================================== -->
+                <!-- HEADER -->
+                <!-- ====================================== -->
 
-                    <TextBlock
-                        Text="Business Overview"
+                <Grid
+                    Grid.Row="0"
+                    Margin="0,0,0,22">
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+
+                    <StackPanel
+                        Spacing="4">
+
+                        <TextBlock
+                            Text="Dashboard"
+                            FontSize="32"
+                            FontWeight="SemiBold"/>
+
+                        <TextBlock
+                            x:Name="ShopNameText"
+                            Text="Computer Repair Shop"
+                            FontSize="15"
+                            Opacity="0.7"/>
+
+                    </StackPanel>
+
+
+                    <StackPanel
+                        Grid.Column="1"
                         HorizontalAlignment="Right"
-                        FontWeight="SemiBold"/>
+                        VerticalAlignment="Center"
+                        Spacing="2">
 
-                    <TextBlock
-                        Text="Current system data"
-                        HorizontalAlignment="Right"
-                        FontSize="12"
-                        Opacity="0.6"/>
+                        <TextBlock
+                            Text="Business Overview"
+                            HorizontalAlignment="Right"
+                            FontWeight="SemiBold"/>
 
-                </StackPanel>
+                        <TextBlock
+                            Text="Current system data"
+                            HorizontalAlignment="Right"
+                            FontSize="12"
+                            Opacity="0.6"/>
 
-            </Grid>
+                    </StackPanel>
 
+                </Grid>
 
-            <!-- ====================================== -->
-            <!-- KPI CARDS -->
-            <!-- ====================================== -->
 
-            <Grid
-                Grid.Row="1"
-                ColumnSpacing="16">
+                <!-- ====================================== -->
+                <!-- KPI CARDS -->
+                <!-- ====================================== -->
 
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+                <Grid
+                    Grid.Row="1"
+                    ColumnSpacing="16"
+                    Margin="0,0,0,18">
 
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- TOTAL REPAIRS -->
 
-                <Border
-                    Grid.Column="0"
-                    Padding="20"
-                    CornerRadius="12"
-                    Background="{StaticResource DashboardCardBrush}"
-                    BorderBrush="{StaticResource DashboardBorderBrush}"
-                    BorderThickness="1">
-
-                    <Grid>
-
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel
-                            Spacing="8">
-
-                            <TextBlock
-                                Text="Total Repairs"
-                                Opacity="0.75"/>
-
-                            <TextBlock
-                                x:Name="TotalRepairsCountText"
-                                Text="0"
-                                FontSize="34"
-                                FontWeight="SemiBold"/>
-
-                            <TextBlock
-                                Text="All repair records"
-                                FontSize="12"
-                                Opacity="0.6"/>
-
-                        </StackPanel>
-
-
-                        <Border
-                            Grid.Column="1"
-                            Width="48"
-                            Height="48"
-                            CornerRadius="24"
-                            Background="#29FF8A00">
-
-                            <FontIcon
-                                Glyph="&#xE90F;"
-                                Foreground="{StaticResource AccentOrangeBrush}"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
-
-                        </Border>
-
-                    </Grid>
-
-                </Border>
-
-
-                <!-- PENDING REPAIRS -->
-
-                <Border
-                    Grid.Column="1"
-                    Padding="20"
-                    CornerRadius="12"
-                    Background="{StaticResource DashboardCardBrush}"
-                    BorderBrush="{StaticResource DashboardBorderBrush}"
-                    BorderThickness="1">
-
-                    <Grid>
-
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel
-                            Spacing="8">
-
-                            <TextBlock
-                                Text="Pending Repairs"
-                                Opacity="0.75"/>
-
-                            <TextBlock
-                                x:Name="PendingRepairsCountText"
-                                Text="0"
-                                FontSize="34"
-                                FontWeight="SemiBold"/>
-
-                            <TextBlock
-                                Text="Waiting to be handled"
-                                FontSize="12"
-                                Opacity="0.6"/>
-
-                        </StackPanel>
-
-
-                        <Border
-                            Grid.Column="1"
-                            Width="48"
-                            Height="48"
-                            CornerRadius="24"
-                            Background="#297C3AED">
-
-                            <FontIcon
-                                Glyph="&#xE823;"
-                                Foreground="{StaticResource AccentPurpleBrush}"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
-
-                        </Border>
-
-                    </Grid>
-
-                </Border>
-
-
-                <!-- COMPLETED REPAIRS -->
-
-                <Border
-                    Grid.Column="2"
-                    Padding="20"
-                    CornerRadius="12"
-                    Background="{StaticResource DashboardCardBrush}"
-                    BorderBrush="{StaticResource DashboardBorderBrush}"
-                    BorderThickness="1">
-
-                    <Grid>
-
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel
-                            Spacing="8">
-
-                            <TextBlock
-                                Text="Completed Repairs"
-                                Opacity="0.75"/>
-
-                            <TextBlock
-                                x:Name="CompletedRepairsCountText"
-                                Text="0"
-                                FontSize="34"
-                                FontWeight="SemiBold"/>
-
-                            <TextBlock
-                                Text="Successfully completed"
-                                FontSize="12"
-                                Opacity="0.6"/>
-
-                        </StackPanel>
-
-
-                        <Border
-                            Grid.Column="1"
-                            Width="48"
-                            Height="48"
-                            CornerRadius="24"
-                            Background="#2916A34A">
-
-                            <FontIcon
-                                Glyph="&#xE73E;"
-                                Foreground="{StaticResource AccentGreenBrush}"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
-
-                        </Border>
-
-                    </Grid>
-
-                </Border>
-
-
-                <!-- TOTAL REVENUE -->
-
-                <Border
-                    Grid.Column="3"
-                    Padding="20"
-                    CornerRadius="12"
-                    Background="{StaticResource DashboardCardBrush}"
-                    BorderBrush="{StaticResource DashboardBorderBrush}"
-                    BorderThickness="1">
-
-                    <Grid>
-
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel
-                            Spacing="8">
-
-                            <TextBlock
-                                Text="Total Revenue"
-                                Opacity="0.75"/>
-
-                            <TextBlock
-                                x:Name="TotalRevenueText"
-                                Text="₱0.00"
-                                FontSize="30"
-                                FontWeight="SemiBold"/>
-
-                            <TextBlock
-                                Text="Completed payments"
-                                FontSize="12"
-                                Opacity="0.6"/>
-
-                        </StackPanel>
-
-
-                        <Border
-                            Grid.Column="1"
-                            Width="48"
-                            Height="48"
-                            CornerRadius="24"
-                            Background="#292563EB">
-
-                            <FontIcon
-                                FontFamily="Segoe MDL2 Assets"
-                                Glyph="&#xEC59;"
-                                Foreground="{StaticResource AccentBlueBrush}"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
-
-                        </Border>
-
-                    </Grid>
-
-                </Border>
-
-            </Grid>
-
-
-            <!-- ====================================== -->
-            <!-- MAIN DASHBOARD ROW -->
-            <!-- ====================================== -->
-
-            <Grid
-                Grid.Row="2"
-                ColumnSpacing="16">
-
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.5*"/>
-                    <ColumnDefinition Width="1*"/>
-                </Grid.ColumnDefinitions>
-
-
-                <!-- ================================== -->
-                <!-- REPAIR OVERVIEW -->
-                <!-- ================================== -->
-
-                <Border
-                    Grid.Column="0"
-                    Padding="22"
-                    CornerRadius="12"
-                    Background="{StaticResource DashboardCardBrush}"
-                    BorderBrush="{StaticResource DashboardBorderBrush}"
-                    BorderThickness="1">
-
-                    <Grid>
-
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="180"/>
-                        </Grid.RowDefinitions>
-
-
-                        <StackPanel
-                            Grid.Row="0"
-                            Spacing="3">
-
-                            <TextBlock
-                                Text="Repair Overview"
-                                FontSize="20"
-                                FontWeight="SemiBold"/>
-
-                            <TextBlock
-                                Text="Repair activity over the last six months."
-                                FontSize="12"
-                                Opacity="0.6"/>
-
-                        </StackPanel>
-
-
-                        <Grid
-                            Grid.Row="1"
-                            x:Name="RepairGraphContainer"
-                            Margin="0,12,0,0"/>
-
-                    </Grid>
-
-                </Border>
-
-
-                <!-- ================================== -->
-                <!-- RECENT REPAIRS -->
-                <!-- ================================== -->
-
-                <Border
-                    Grid.Column="1"
-                    Padding="22"
-                    CornerRadius="12"
-                    Background="{StaticResource DashboardCardBrush}"
-                    BorderBrush="{StaticResource DashboardBorderBrush}"
-                    BorderThickness="1">
-
-                    <Grid>
-
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-
-                        <StackPanel
-                            Grid.Row="0"
-                            Spacing="3">
-
-                            <TextBlock
-                                Text="Recent Repairs"
-                                FontSize="20"
-                                FontWeight="SemiBold"/>
-
-                            <TextBlock
-                                Text="Latest repair activity."
-                                FontSize="12"
-                                Opacity="0.6"/>
-
-                        </StackPanel>
-
-
-                        <ListView
-                            Grid.Row="1"
-                            x:Name="RecentRepairsListView"
-                            Margin="0,12,0,0"
-                            SelectionMode="None">
-
-                            <ListView.ItemTemplate>
-
-                                <DataTemplate>
-
-                                    <Grid
-                                        Padding="6"
-                                        Margin="0,2">
-
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-
-
-                                        <StackPanel
-                                            Spacing="3">
-
-                                            <TextBlock
-                                                Text="{Binding CustomerName}"
-                                                FontWeight="SemiBold"/>
-
-                                            <TextBlock
-                                                Text="{Binding DeviceName}"
-                                                FontSize="12"
-                                                Opacity="0.6"/>
-
-                                        </StackPanel>
-
-
-                                        <StackPanel
-                                            Grid.Column="1"
-                                            HorizontalAlignment="Right"
-                                            Spacing="3">
-
-                                            <TextBlock
-                                                Text="{Binding RepairNumber}"
-                                                FontSize="12"
-                                                HorizontalAlignment="Right"/>
-
-                                            <TextBlock
-                                                Text="{Binding Status}"
-                                                FontSize="11"
-                                                HorizontalAlignment="Right"
-                                                Opacity="0.7"/>
-
-                                        </StackPanel>
-
-                                    </Grid>
-
-                                </DataTemplate>
-
-                            </ListView.ItemTemplate>
-
-                        </ListView>
-
-                    </Grid>
-
-                </Border>
-
-            </Grid>
-
-
-            <!-- ====================================== -->
-            <!-- SECOND DASHBOARD ROW -->
-            <!-- ====================================== -->
-
-            <Grid
-                Grid.Row="3"
-                ColumnSpacing="16"
-                RowSpacing="16">
-
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1*"/>
-                    <ColumnDefinition Width="1.3*"/>
-                </Grid.ColumnDefinitions>
-
-
-                <!-- ================================== -->
-                <!-- LEFT SIDE -->
-                <!-- ================================== -->
-
-                <StackPanel
-                    Grid.Column="0"
-                    Spacing="16">
-
-
-                    <!-- REPAIR STATUS -->
+                    <!-- TOTAL REPAIRS -->
 
                     <Border
-                        Padding="22"
+                        Grid.Column="0"
+                        Padding="20"
                         CornerRadius="12"
                         Background="{StaticResource DashboardCardBrush}"
                         BorderBrush="{StaticResource DashboardBorderBrush}"
                         BorderThickness="1">
 
-                        <StackPanel
-                            Spacing="14">
+                        <Grid>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
                             <StackPanel
-                                Spacing="3">
+                                Spacing="8">
 
                                 <TextBlock
-                                    Text="Repair Status"
-                                    FontSize="20"
+                                    Text="Total Repairs"
+                                    Opacity="0.75"/>
+
+                                <TextBlock
+                                    x:Name="TotalRepairsCountText"
+                                    Text="0"
+                                    FontSize="34"
                                     FontWeight="SemiBold"/>
 
                                 <TextBlock
-                                    Text="Current repair workload."
+                                    Text="All repair records"
                                     FontSize="12"
                                     Opacity="0.6"/>
 
                             </StackPanel>
 
 
-                            <!-- PENDING -->
+                            <Border
+                                Grid.Column="1"
+                                Width="48"
+                                Height="48"
+                                CornerRadius="24"
+                                Background="#29FF8A00">
 
-                            <StackPanel
-                                Spacing="6">
+                                <FontIcon
+                                    Glyph="&#xE90F;"
+                                    Foreground="{StaticResource AccentOrangeBrush}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
 
-                                <Grid>
+                            </Border>
 
-                                    <TextBlock
-                                        Text="Pending"/>
-
-                                    <TextBlock
-                                        x:Name="PendingRepairsGraphText"
-                                        Text="0"
-                                        HorizontalAlignment="Right"/>
-
-                                </Grid>
-
-                                <ProgressBar
-                                    x:Name="PendingRepairsProgress"
-                                    Height="8"
-                                    Minimum="0"
-                                    Maximum="100"
-                                    Value="0"/>
-
-                            </StackPanel>
-
-
-                            <!-- IN PROGRESS -->
-
-                            <StackPanel
-                                Spacing="6">
-
-                                <Grid>
-
-                                    <TextBlock
-                                        Text="In Progress"/>
-
-                                    <TextBlock
-                                        x:Name="InProgressRepairsGraphText"
-                                        Text="0"
-                                        HorizontalAlignment="Right"/>
-
-                                </Grid>
-
-                                <ProgressBar
-                                    x:Name="InProgressRepairsProgress"
-                                    Height="8"
-                                    Minimum="0"
-                                    Maximum="100"
-                                    Value="0"/>
-
-                            </StackPanel>
-
-
-                            <!-- COMPLETED -->
-
-                            <StackPanel
-                                Spacing="6">
-
-                                <Grid>
-
-                                    <TextBlock
-                                        Text="Completed"/>
-
-                                    <TextBlock
-                                        x:Name="CompletedRepairsGraphText"
-                                        Text="0"
-                                        HorizontalAlignment="Right"/>
-
-                                </Grid>
-
-                                <ProgressBar
-                                    x:Name="CompletedRepairsProgress"
-                                    Height="8"
-                                    Minimum="0"
-                                    Maximum="100"
-                                    Value="0"/>
-
-                            </StackPanel>
-
-                        </StackPanel>
+                        </Grid>
 
                     </Border>
 
 
-                    <!-- LOW STOCK -->
+                    <!-- PENDING REPAIRS -->
 
                     <Border
-                        Padding="22"
+                        Grid.Column="1"
+                        Padding="20"
                         CornerRadius="12"
                         Background="{StaticResource DashboardCardBrush}"
                         BorderBrush="{StaticResource DashboardBorderBrush}"
                         BorderThickness="1">
 
-                        <StackPanel
-                            Spacing="12">
+                        <Grid>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
                             <StackPanel
-                                Spacing="3">
+                                Spacing="8">
 
                                 <TextBlock
-                                    Text="Low Stock"
-                                    FontSize="20"
+                                    Text="Pending Repairs"
+                                    Opacity="0.75"/>
+
+                                <TextBlock
+                                    x:Name="PendingRepairsCountText"
+                                    Text="0"
+                                    FontSize="34"
                                     FontWeight="SemiBold"/>
 
                                 <TextBlock
-                                    Text="Items that need attention."
+                                    Text="Waiting to be handled"
                                     FontSize="12"
                                     Opacity="0.6"/>
 
                             </StackPanel>
 
 
-                            <Grid>
+                            <Border
+                                Grid.Column="1"
+                                Width="48"
+                                Height="48"
+                                CornerRadius="24"
+                                Background="#297C3AED">
 
-                                <TextBlock
-                                    x:Name="LowStockCountText"
-                                    Text="0 items"
-                                    FontSize="24"
-                                    FontWeight="SemiBold"/>
+                                <FontIcon
+                                    Glyph="&#xE823;"
+                                    Foreground="{StaticResource AccentPurpleBrush}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
 
-                                <TextBlock
-                                    Text="Reorder recommended"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Bottom"
-                                    FontSize="11"
-                                    Opacity="0.6"/>
+                            </Border>
 
-                            </Grid>
-
-
-                            <ListView
-                                x:Name="LowStockListView"
-                                MaxHeight="130"
-                                SelectionMode="None"/>
-
-                        </StackPanel>
+                        </Grid>
 
                     </Border>
 
-                </StackPanel>
 
-
-                <!-- ================================== -->
-                <!-- RIGHT SIDE -->
-                <!-- ================================== -->
-
-                <StackPanel
-                    Grid.Column="1"
-                    Spacing="16">
-
-
-                    <!-- RECENT TRANSACTIONS -->
+                    <!-- COMPLETED REPAIRS -->
 
                     <Border
+                        Grid.Column="2"
+                        Padding="20"
+                        CornerRadius="12"
+                        Background="{StaticResource DashboardCardBrush}"
+                        BorderBrush="{StaticResource DashboardBorderBrush}"
+                        BorderThickness="1">
+
+                        <Grid>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel
+                                Spacing="8">
+
+                                <TextBlock
+                                    Text="Completed Repairs"
+                                    Opacity="0.75"/>
+
+                                <TextBlock
+                                    x:Name="CompletedRepairsCountText"
+                                    Text="0"
+                                    FontSize="34"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Text="Successfully completed"
+                                    FontSize="12"
+                                    Opacity="0.6"/>
+
+                            </StackPanel>
+
+
+                            <Border
+                                Grid.Column="1"
+                                Width="48"
+                                Height="48"
+                                CornerRadius="24"
+                                Background="#2916A34A">
+
+                                <FontIcon
+                                    Glyph="&#xE73E;"
+                                    Foreground="{StaticResource AccentGreenBrush}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
+
+                            </Border>
+
+                        </Grid>
+
+                    </Border>
+
+
+                    <!-- TOTAL REVENUE -->
+
+                    <Border
+                        Grid.Column="3"
+                        Padding="20"
+                        CornerRadius="12"
+                        Background="{StaticResource DashboardCardBrush}"
+                        BorderBrush="{StaticResource DashboardBorderBrush}"
+                        BorderThickness="1">
+
+                        <Grid>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel
+                                Spacing="8">
+
+                                <TextBlock
+                                    Text="Total Revenue"
+                                    Opacity="0.75"/>
+
+                                <TextBlock
+                                    x:Name="TotalRevenueText"
+                                    Text="₱0.00"
+                                    FontSize="30"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Text="Completed payments"
+                                    FontSize="12"
+                                    Opacity="0.6"/>
+
+                            </StackPanel>
+
+
+                            <Border
+                                Grid.Column="1"
+                                Width="48"
+                                Height="48"
+                                CornerRadius="24"
+                                Background="#292563EB">
+
+                                <FontIcon
+                                    FontFamily="Segoe MDL2 Assets"
+                                    Glyph="&#xEC59;"
+                                    Foreground="{StaticResource AccentBlueBrush}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
+
+                            </Border>
+
+                        </Grid>
+
+                    </Border>
+
+                </Grid>
+
+
+                <!-- ====================================== -->
+                <!-- MAIN DASHBOARD ROW -->
+                <!-- ====================================== -->
+
+                <Grid
+                    Grid.Row="2"
+                    ColumnSpacing="16"
+                    Margin="0,0,0,18">
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+
+
+                    <!-- REPAIR OVERVIEW -->
+
+                    <Border
+                        Grid.Column="0"
+                        Padding="22"
+                        CornerRadius="12"
+                        Background="{StaticResource DashboardCardBrush}"
+                        BorderBrush="{StaticResource DashboardBorderBrush}"
+                        BorderThickness="1">
+
+                        <Grid>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="180"/>
+                            </Grid.RowDefinitions>
+
+
+                            <StackPanel
+                                Grid.Row="0"
+                                Spacing="3">
+
+                                <TextBlock
+                                    Text="Repair Overview"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Text="Repair activity over the last six months."
+                                    FontSize="12"
+                                    Opacity="0.6"/>
+
+                            </StackPanel>
+
+
+                            <Grid
+                                Grid.Row="1"
+                                x:Name="RepairGraphContainer"
+                                Margin="0,12,0,0"/>
+
+                        </Grid>
+
+                    </Border>
+
+
+                    <!-- RECENT REPAIRS -->
+
+                    <Border
+                        Grid.Column="1"
                         Padding="22"
                         CornerRadius="12"
                         Background="{StaticResource DashboardCardBrush}"
@@ -750,12 +452,12 @@
                                 Spacing="3">
 
                                 <TextBlock
-                                    Text="Recent Transactions"
+                                    Text="Recent Repairs"
                                     FontSize="20"
                                     FontWeight="SemiBold"/>
 
                                 <TextBlock
-                                    Text="Latest payment activity."
+                                    Text="Latest repair activity."
                                     FontSize="12"
                                     Opacity="0.6"/>
 
@@ -764,9 +466,8 @@
 
                             <ListView
                                 Grid.Row="1"
-                                x:Name="RecentTransactionsListView"
-                                Margin="0,10,0,0"
-                                MaxHeight="190"
+                                x:Name="RecentRepairsListView"
+                                Margin="0,12,0,0"
                                 SelectionMode="None">
 
                                 <ListView.ItemTemplate>
@@ -780,7 +481,6 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
 
 
@@ -788,29 +488,34 @@
                                                 Spacing="3">
 
                                                 <TextBlock
-                                                    Text="{Binding InvoiceNumber}"
+                                                    Text="{Binding CustomerName}"
                                                     FontWeight="SemiBold"/>
 
                                                 <TextBlock
-                                                    Text="{Binding CustomerName}"
+                                                    Text="{Binding DeviceName}"
                                                     FontSize="12"
                                                     Opacity="0.6"/>
 
                                             </StackPanel>
 
 
-                                            <TextBlock
+                                            <StackPanel
                                                 Grid.Column="1"
-                                                Text="{Binding PaymentMethod}"
-                                                FontSize="12"
-                                                Margin="16,0"/>
-
-
-                                            <TextBlock
-                                                Grid.Column="2"
-                                                Text="{Binding AmountText}"
                                                 HorizontalAlignment="Right"
-                                                FontWeight="SemiBold"/>
+                                                Spacing="3">
+
+                                                <TextBlock
+                                                    Text="{Binding RepairNumber}"
+                                                    FontSize="12"
+                                                    HorizontalAlignment="Right"/>
+
+                                                <TextBlock
+                                                    Text="{Binding Status}"
+                                                    FontSize="11"
+                                                    HorizontalAlignment="Right"
+                                                    Opacity="0.7"/>
+
+                                            </StackPanel>
 
                                         </Grid>
 
@@ -824,10 +529,644 @@
 
                     </Border>
 
+                </Grid>
 
-                    <!-- ================================== -->
-                    <!-- OUTSTANDING PAYMENTS + ATTENDANCE -->
-                    <!-- ================================== -->
+
+                <!-- ====================================== -->
+                <!-- SECOND DASHBOARD ROW -->
+                <!-- ====================================== -->
+
+                <Grid
+                    Grid.Row="3"
+                    ColumnSpacing="16">
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="1.3*"/>
+                    </Grid.ColumnDefinitions>
+
+
+                    <!-- LEFT SIDE -->
+
+                    <StackPanel
+                        Grid.Column="0"
+                        Spacing="16">
+
+
+                        <!-- REPAIR STATUS -->
+
+                        <Border
+                            Padding="22"
+                            CornerRadius="12"
+                            Background="{StaticResource DashboardCardBrush}"
+                            BorderBrush="{StaticResource DashboardBorderBrush}"
+                            BorderThickness="1">
+
+                            <StackPanel
+                                Spacing="14">
+
+                                <StackPanel
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Repair Status"
+                                        FontSize="20"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="Current repair workload."
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <!-- PENDING -->
+
+                                <StackPanel
+                                    Spacing="6">
+
+                                    <Grid>
+
+                                        <TextBlock
+                                            Text="Pending"/>
+
+                                        <TextBlock
+                                            x:Name="PendingRepairsGraphText"
+                                            Text="0"
+                                            HorizontalAlignment="Right"/>
+
+                                    </Grid>
+
+                                    <ProgressBar
+                                        x:Name="PendingRepairsProgress"
+                                        Height="8"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        Value="0"/>
+
+                                </StackPanel>
+
+
+                                <!-- IN PROGRESS -->
+
+                                <StackPanel
+                                    Spacing="6">
+
+                                    <Grid>
+
+                                        <TextBlock
+                                            Text="In Progress"/>
+
+                                        <TextBlock
+                                            x:Name="InProgressRepairsGraphText"
+                                            Text="0"
+                                            HorizontalAlignment="Right"/>
+
+                                    </Grid>
+
+                                    <ProgressBar
+                                        x:Name="InProgressRepairsProgress"
+                                        Height="8"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        Value="0"/>
+
+                                </StackPanel>
+
+
+                                <!-- COMPLETED -->
+
+                                <StackPanel
+                                    Spacing="6">
+
+                                    <Grid>
+
+                                        <TextBlock
+                                            Text="Completed"/>
+
+                                        <TextBlock
+                                            x:Name="CompletedRepairsGraphText"
+                                            Text="0"
+                                            HorizontalAlignment="Right"/>
+
+                                    </Grid>
+
+                                    <ProgressBar
+                                        x:Name="CompletedRepairsProgress"
+                                        Height="8"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        Value="0"/>
+
+                                </StackPanel>
+
+                            </StackPanel>
+
+                        </Border>
+
+
+                        <!-- LOW STOCK -->
+
+                        <Border
+                            Padding="22"
+                            CornerRadius="12"
+                            Background="{StaticResource DashboardCardBrush}"
+                            BorderBrush="{StaticResource DashboardBorderBrush}"
+                            BorderThickness="1">
+
+                            <StackPanel
+                                Spacing="12">
+
+                                <StackPanel
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Low Stock"
+                                        FontSize="20"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="Items that need attention."
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <Grid>
+
+                                    <TextBlock
+                                        x:Name="LowStockCountText"
+                                        Text="0 items"
+                                        FontSize="24"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="Reorder recommended"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Bottom"
+                                        FontSize="11"
+                                        Opacity="0.6"/>
+
+                                </Grid>
+
+
+                                <ListView
+                                    x:Name="LowStockListView"
+                                    MaxHeight="130"
+                                    SelectionMode="None"/>
+
+                            </StackPanel>
+
+                        </Border>
+
+                    </StackPanel>
+
+
+                    <!-- RIGHT SIDE -->
+
+                    <StackPanel
+                        Grid.Column="1"
+                        Spacing="16">
+
+
+                        <!-- RECENT TRANSACTIONS -->
+
+                        <Border
+                            Padding="22"
+                            CornerRadius="12"
+                            Background="{StaticResource DashboardCardBrush}"
+                            BorderBrush="{StaticResource DashboardBorderBrush}"
+                            BorderThickness="1">
+
+                            <Grid>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+
+                                <StackPanel
+                                    Grid.Row="0"
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Recent Transactions"
+                                        FontSize="20"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="Latest payment activity."
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <ListView
+                                    Grid.Row="1"
+                                    x:Name="RecentTransactionsListView"
+                                    Margin="0,10,0,0"
+                                    MaxHeight="190"
+                                    SelectionMode="None">
+
+                                    <ListView.ItemTemplate>
+
+                                        <DataTemplate>
+
+                                            <Grid
+                                                Padding="6"
+                                                Margin="0,2">
+
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+
+                                                <StackPanel
+                                                    Spacing="3">
+
+                                                    <TextBlock
+                                                        Text="{Binding InvoiceNumber}"
+                                                        FontWeight="SemiBold"/>
+
+                                                    <TextBlock
+                                                        Text="{Binding CustomerName}"
+                                                        FontSize="12"
+                                                        Opacity="0.6"/>
+
+                                                </StackPanel>
+
+
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    Text="{Binding PaymentMethod}"
+                                                    FontSize="12"
+                                                    Margin="16,0"/>
+
+
+                                                <TextBlock
+                                                    Grid.Column="2"
+                                                    Text="{Binding AmountText}"
+                                                    HorizontalAlignment="Right"
+                                                    FontWeight="SemiBold"/>
+
+                                            </Grid>
+
+                                        </DataTemplate>
+
+                                    </ListView.ItemTemplate>
+
+                                </ListView>
+
+                            </Grid>
+
+                        </Border>
+
+
+                        <!-- OUTSTANDING PAYMENTS + ATTENDANCE -->
+
+                        <Grid
+                            ColumnSpacing="16">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+
+                            <!-- OUTSTANDING PAYMENTS -->
+
+                            <Border
+                                Grid.Column="0"
+                                Padding="20"
+                                CornerRadius="12"
+                                Background="{StaticResource DashboardCardBrush}"
+                                BorderBrush="{StaticResource DashboardBorderBrush}"
+                                BorderThickness="1">
+
+                                <StackPanel
+                                    Spacing="8">
+
+                                    <TextBlock
+                                        Text="Outstanding Payments"
+                                        FontSize="18"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        x:Name="OutstandingPaymentsText"
+                                        Text="₱0.00"
+                                        FontSize="28"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        x:Name="OutstandingInvoicesCountText"
+                                        Text="0 invoices"
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+                            </Border>
+
+
+                            <!-- TODAY'S ATTENDANCE -->
+
+                            <Border
+                                Grid.Column="1"
+                                Padding="20"
+                                CornerRadius="12"
+                                Background="{StaticResource DashboardCardBrush}"
+                                BorderBrush="{StaticResource DashboardBorderBrush}"
+                                BorderThickness="1">
+
+                                <StackPanel
+                                    Spacing="7">
+
+                                    <TextBlock
+                                        Text="Today's Attendance"
+                                        FontSize="18"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        x:Name="PresentAttendanceText"
+                                        Text="Present: 0"/>
+
+                                    <TextBlock
+                                        x:Name="LateAttendanceText"
+                                        Text="Late: 0"/>
+
+                                    <TextBlock
+                                        x:Name="AbsentAttendanceText"
+                                        Text="Absent: 0"/>
+
+                                    <TextBlock
+                                        x:Name="LeaveAttendanceText"
+                                        Text="Leave: 0"/>
+
+                                </StackPanel>
+
+                            </Border>
+
+                        </Grid>
+
+                    </StackPanel>
+
+                </Grid>
+                
+                <!-- ====================================== -->
+                <!-- SALES TRENDS -->
+                <!-- ====================================== -->
+
+                <Border
+                    Grid.Row="4"
+                    Margin="0,18,0,0"
+                    Padding="22"
+                    CornerRadius="12"
+                    Background="{StaticResource DashboardCardBrush}"
+                    BorderBrush="{StaticResource DashboardBorderBrush}"
+                    BorderThickness="1">
+
+                    <Grid>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="180"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- HEADER -->
+
+                        <Grid
+                            Grid.Row="0">
+
+                            <StackPanel
+                                Spacing="3">
+
+                                <TextBlock
+                                    Text="Sales Trends"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Text="Completed payment sales over time."
+                                    FontSize="12"
+                                    Opacity="0.6"/>
+
+                            </StackPanel>
+
+                            <ComboBox
+                                x:Name="SalesTrendPeriodComboBox"
+                                Width="120"
+                                HorizontalAlignment="Right"
+                                SelectedIndex="0"
+                                SelectionChanged="SalesTrendPeriodComboBox_SelectionChanged">
+
+                                <ComboBoxItem
+                                    Content="Weekly"/>
+
+                                <ComboBoxItem
+                                    Content="Monthly"/>
+
+                                <ComboBoxItem
+                                    Content="Yearly"/>
+
+                            </ComboBox>
+
+                        </Grid>
+
+
+                        <!-- GRAPH -->
+
+                        <Grid
+                            Grid.Row="1"
+                            x:Name="SalesTrendGraphContainer"
+                            Margin="0,12,0,0"/>
+
+                    </Grid>
+                </Border>
+
+
+                <!-- ====================================== -->
+                <!-- PROFIT VS EXPENSES -->
+                <!-- ====================================== -->
+
+                <Border
+                   Grid.Row="5"
+                   Margin="0,18,0,0"
+                   Padding="22"
+                   CornerRadius="12"
+                   Background="{StaticResource DashboardCardBrush}"
+                   BorderBrush="{StaticResource DashboardBorderBrush}"
+                   BorderThickness="1">
+
+                    <StackPanel
+                       Spacing="12">
+
+                        <StackPanel
+                           Spacing="3">
+
+                            <TextBlock
+                               Text="Profit vs Expenses"
+                               FontSize="20"
+                               FontWeight="SemiBold"/>
+
+                            <TextBlock
+                               Text="Current month financial overview."
+                               FontSize="12"
+                               Opacity="0.6"/>
+
+                        </StackPanel>
+
+
+                        <Grid
+                           ColumnSpacing="20">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+
+                            <!-- PROFIT -->
+
+                            <StackPanel
+                               Grid.Column="0"
+                               Spacing="4">
+
+                                <TextBlock
+                                   Text="Profit"
+                                   FontSize="12"
+                                   Opacity="0.6"/>
+
+                                <TextBlock
+                                   x:Name="ProfitTextBlock"
+                                   Text="₱0.00"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"/>
+
+                            </StackPanel>
+
+
+                            <!-- REVENUE -->
+
+                            <StackPanel
+                               Grid.Column="1"
+                               Spacing="4">
+
+                                <TextBlock
+                                   Text="Revenue"
+                                   FontSize="12"
+                                   Opacity="0.6"/>
+
+                                <TextBlock
+                                   x:Name="RevenueTextBlock"
+                                   Text="₱0.00"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"/>
+
+                            </StackPanel>
+
+
+                            <!-- EXPENSES -->
+
+                            <StackPanel
+                               Grid.Column="2"
+                               Spacing="4">
+
+                                <TextBlock
+                                   Text="Expenses"
+                                   FontSize="12"
+                                   Opacity="0.6"/>
+
+                                <TextBlock
+                                   x:Name="ExpensesTextBlock"
+                                   Text="₱0.00"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"/>
+
+                            </StackPanel>
+
+                        </Grid>
+
+                    </StackPanel>
+
+                </Border>
+
+
+            </Grid>
+
+
+            <!-- ===================================================== -->
+            <!-- SUPER ADMIN DASHBOARD -->
+            <!-- ===================================================== -->
+
+            <Grid
+                x:Name="SuperAdminDashboard"
+                Visibility="Collapsed">
+
+                <StackPanel
+                    Spacing="22">
+
+
+                    <!-- ====================================== -->
+                    <!-- HEADER -->
+                    <!-- ====================================== -->
+
+                    <Grid
+                        Margin="0,0,0,4">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+
+                        <StackPanel
+                            Spacing="4">
+
+                            <TextBlock
+                                Text="Super Admin Dashboard"
+                                FontSize="32"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Text="System-wide overview"
+                                FontSize="15"
+                                Opacity="0.7"/>
+
+                        </StackPanel>
+
+
+                        <StackPanel
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+
+                            <TextBlock
+                                Text="System Administration"
+                                HorizontalAlignment="Right"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Text="Master system data"
+                                HorizontalAlignment="Right"
+                                FontSize="12"
+                                Opacity="0.6"/>
+
+                        </StackPanel>
+
+                    </Grid>
+
+
+                    <!-- ====================================== -->
+                    <!-- SUPER ADMIN KPI CARDS -->
+                    <!-- ====================================== -->
 
                     <Grid
                         ColumnSpacing="16">
@@ -835,10 +1174,12 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
 
-                        <!-- OUTSTANDING PAYMENTS -->
+                        <!-- TOTAL COMPANIES -->
 
                         <Border
                             Grid.Column="0"
@@ -848,32 +1189,56 @@
                             BorderBrush="{StaticResource DashboardBorderBrush}"
                             BorderThickness="1">
 
-                            <StackPanel
-                                Spacing="8">
+                            <Grid>
 
-                                <TextBlock
-                                    Text="Outstanding Payments"
-                                    FontSize="18"
-                                    FontWeight="SemiBold"/>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                                <TextBlock
-                                    x:Name="OutstandingPaymentsText"
-                                    Text="₱0.00"
-                                    FontSize="28"
-                                    FontWeight="SemiBold"/>
 
-                                <TextBlock
-                                    x:Name="OutstandingInvoicesCountText"
-                                    Text="0 invoices"
-                                    FontSize="12"
-                                    Opacity="0.6"/>
+                                <StackPanel
+                                    Spacing="8">
 
-                            </StackPanel>
+                                    <TextBlock
+                                        Text="Total Companies"
+                                        Opacity="0.75"/>
+
+                                    <TextBlock
+                                        x:Name="SuperAdminTotalCompaniesText"
+                                        Text="0"
+                                        FontSize="34"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="Registered companies"
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <Border
+                                    Grid.Column="1"
+                                    Width="48"
+                                    Height="48"
+                                    CornerRadius="24"
+                                    Background="#292563EB">
+
+                                    <FontIcon
+                                        Glyph="&#xE716;"
+                                        Foreground="{StaticResource AccentBlueBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+
+                                </Border>
+
+                            </Grid>
 
                         </Border>
 
 
-                        <!-- TODAY'S ATTENDANCE -->
+                        <!-- TOTAL USERS -->
 
                         <Border
                             Grid.Column="1"
@@ -883,29 +1248,598 @@
                             BorderBrush="{StaticResource DashboardBorderBrush}"
                             BorderThickness="1">
 
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+
+                                <StackPanel
+                                    Spacing="8">
+
+                                    <TextBlock
+                                        Text="Total Users"
+                                        Opacity="0.75"/>
+
+                                    <TextBlock
+                                        x:Name="SuperAdminTotalUsersText"
+                                        Text="0"
+                                        FontSize="34"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="System users"
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <Border
+                                    Grid.Column="1"
+                                    Width="48"
+                                    Height="48"
+                                    CornerRadius="24"
+                                    Background="#297C3AED">
+
+                                    <FontIcon
+                                        Glyph="&#xE77B;"
+                                        Foreground="{StaticResource AccentPurpleBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+
+                                </Border>
+
+                            </Grid>
+
+                        </Border>
+
+
+                        <!-- TOTAL SUBSCRIPTIONS -->
+
+                        <Border
+                            Grid.Column="2"
+                            Padding="20"
+                            CornerRadius="12"
+                            Background="{StaticResource DashboardCardBrush}"
+                            BorderBrush="{StaticResource DashboardBorderBrush}"
+                            BorderThickness="1">
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+
+                                <StackPanel
+                                    Spacing="8">
+
+                                    <TextBlock
+                                        Text="Total Subscriptions"
+                                        Opacity="0.75"/>
+
+                                    <TextBlock
+                                        x:Name="SuperAdminTotalSubscriptionsText"
+                                        Text="0"
+                                        FontSize="34"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="All subscription records"
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <Border
+                                    Grid.Column="1"
+                                    Width="48"
+                                    Height="48"
+                                    CornerRadius="24"
+                                    Background="#29FF8A00">
+
+                                    <FontIcon
+                                        Glyph="&#xE8C7;"
+                                        Foreground="{StaticResource AccentOrangeBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+
+                                </Border>
+
+                            </Grid>
+
+                        </Border>
+
+
+                        <!-- ACTIVE SUBSCRIPTIONS -->
+
+                        <Border
+                            Grid.Column="3"
+                            Padding="20"
+                            CornerRadius="12"
+                            Background="{StaticResource DashboardCardBrush}"
+                            BorderBrush="{StaticResource DashboardBorderBrush}"
+                            BorderThickness="1">
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+
+                                <StackPanel
+                                    Spacing="8">
+
+                                    <TextBlock
+                                        Text="Active Subscriptions"
+                                        Opacity="0.75"/>
+
+                                    <TextBlock
+                                        x:Name="SuperAdminActiveSubscriptionsText"
+                                        Text="0"
+                                        FontSize="34"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="Currently active"
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <Border
+                                    Grid.Column="1"
+                                    Width="48"
+                                    Height="48"
+                                    CornerRadius="24"
+                                    Background="#2916A34A">
+
+                                    <FontIcon
+                                        Glyph="&#xE73E;"
+                                        Foreground="{StaticResource AccentGreenBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+
+                                </Border>
+
+                            </Grid>
+
+                        </Border>
+
+                    </Grid>
+
+
+                    <!-- ====================================== -->
+                    <!-- SUPER ADMIN INFORMATION -->
+                    <!-- ====================================== -->
+
+                    <Grid
+                        ColumnSpacing="16">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.3*"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
+
+
+
+                        <!-- COMPANIES OVERVIEW -->
+
+                        <Border
+                            Grid.Column="0"
+                            Padding="22"
+                            CornerRadius="12"
+                            Background="{StaticResource DashboardCardBrush}"
+                            BorderBrush="{StaticResource DashboardBorderBrush}"
+                            BorderThickness="1">
+
                             <StackPanel
-                                Spacing="7">
+                                Spacing="16">
+
+                                <StackPanel
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Companies Overview"
+                                        FontSize="20"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="Manage registered companies and their enterprise classification."
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <!-- ENTERPRISE CLASSIFICATION -->
+
+                                <Grid
+                                    ColumnSpacing="12">
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+
+                                    <!-- MICRO -->
+
+                                    <Border
+                                        Grid.Column="0"
+                                        Padding="16"
+                                        CornerRadius="8"
+                                        Background="#1A2563EB">
+
+                                        <StackPanel
+                                            Spacing="4">
+
+                                            <TextBlock
+                                                Text="Micro"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                x:Name="MicroCompaniesCountText"
+                                                Text="0 companies"
+                                                FontSize="20"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                Text="Enterprise classification"
+                                                FontSize="11"
+                                                Opacity="0.6"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+
+                                    <!-- SMALL -->
+
+                                    <Border
+                                        Grid.Column="1"
+                                        Padding="16"
+                                        CornerRadius="8"
+                                        Background="#1A7C3AED">
+
+                                        <StackPanel
+                                            Spacing="4">
+
+                                            <TextBlock
+                                                Text="Small"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                x:Name="SmallCompaniesCountText"
+                                                Text="0 companies"
+                                                FontSize="20"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                Text="Enterprise classification"
+                                                FontSize="11"
+                                                Opacity="0.6"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+
+                                    <!-- MEDIUM -->
+
+                                    <Border
+                                        Grid.Column="2"
+                                        Padding="16"
+                                        CornerRadius="8"
+                                        Background="#1AFF8A00">
+
+                                        <StackPanel
+                                            Spacing="4">
+
+                                            <TextBlock
+                                                Text="Medium"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                x:Name="MediumCompaniesCountText"
+                                                Text="0 companies"
+                                                FontSize="20"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                Text="Enterprise classification"
+                                                FontSize="11"
+                                                Opacity="0.6"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+                                </Grid>
+
+
+                                <!-- RECENT COMPANIES -->
+
+                                <StackPanel
+                                    Spacing="8">
+
+                                    <TextBlock
+                                        Text="Recent Companies"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"/>
+
+                                    <ListView
+                                        x:Name="RecentCompaniesListView"
+                                        MaxHeight="180"
+                                        SelectionMode="None">
+
+                                        <ListView.ItemTemplate>
+
+                                            <DataTemplate>
+
+                                                <Grid
+                                                    Padding="8"
+                                                    ColumnSpacing="12">
+
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="140"/>
+                                                        <ColumnDefinition Width="100"/>
+                                                    </Grid.ColumnDefinitions>
+
+
+                                                    <StackPanel
+                                                        Grid.Column="0"
+                                                        Spacing="2">
+
+                                                        <TextBlock
+                                                            Text="{Binding CompanyName}"
+                                                            FontWeight="SemiBold"/>
+
+                                                        <TextBlock
+                                                            Text="{Binding CompanyCode}"
+                                                            FontSize="11"
+                                                            Opacity="0.6"/>
+
+                                                    </StackPanel>
+
+
+                                                    <TextBlock
+                                                        Grid.Column="1"
+                                                        Text="{Binding EnterpriseType}"
+                                                        VerticalAlignment="Center"
+                                                        Opacity="0.8"/>
+
+
+                                                    <TextBlock
+                                                        Grid.Column="2"
+                                                        Text="{Binding CreatedAtText}"
+                                                        VerticalAlignment="Center"
+                                                        FontSize="11"
+                                                        Opacity="0.6"/>
+
+                                                </Grid>
+
+                                            </DataTemplate>
+
+                                        </ListView.ItemTemplate>
+
+                                    </ListView>
+
+                                </StackPanel>
+
+                            </StackPanel>
+
+                        </Border>
+
+                        <!-- SUBSCRIPTION OVERVIEW -->
+
+                        <Border
+                            Grid.Column="1"
+                            Padding="22"
+                            CornerRadius="12"
+                            Background="{StaticResource DashboardCardBrush}"
+                            BorderBrush="{StaticResource DashboardBorderBrush}"
+                            BorderThickness="1">
+
+                            <StackPanel
+                                Spacing="12">
+
+                                <!-- HEADER -->
+
+                                <StackPanel
+                                    Spacing="3">
+
+                                    <TextBlock
+                                        Text="Subscription Overview"
+                                        FontSize="20"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Text="Monitor company subscriptions."
+                                        FontSize="12"
+                                        Opacity="0.6"/>
+
+                                </StackPanel>
+
+
+                                <!-- SUMMARY -->
+
+                                <Grid
+                                    ColumnSpacing="30"
+                                    Margin="0,4,0,4">
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+
+                                    <!-- TOTAL -->
+
+                                    <StackPanel
+                                        Grid.Column="0"
+                                        Spacing="2">
+
+                                        <TextBlock
+                                            Text="Total subscriptions"
+                                            FontSize="13"/>
+
+                                        <TextBlock
+                                            Text="{Binding ElementName=SuperAdminTotalSubscriptionsText, Path=Text}"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"/>
+
+                                    </StackPanel>
+
+
+                                    <!-- ACTIVE -->
+
+                                    <StackPanel
+                                        Grid.Column="1"
+                                        Spacing="2">
+
+                                        <TextBlock
+                                            Text="Active subscriptions"
+                                            FontSize="13"/>
+
+                                        <TextBlock
+                                            Text="{Binding ElementName=SuperAdminActiveSubscriptionsText, Path=Text}"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"/>
+
+                                    </StackPanel>
+
+                                </Grid>
+
+
+                                <!-- GRAPH TITLE -->
 
                                 <TextBlock
-                                    Text="Today's Attendance"
-                                    FontSize="18"
-                                    FontWeight="SemiBold"/>
+                                    Text="Active subscriptions by type"
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    Margin="0,8,0,0"/>
 
-                                <TextBlock
-                                    x:Name="PresentAttendanceText"
-                                    Text="Present: 0"/>
 
-                                <TextBlock
-                                    x:Name="LateAttendanceText"
-                                    Text="Late: 0"/>
+                                <!-- MICRO -->
 
-                                <TextBlock
-                                    x:Name="AbsentAttendanceText"
-                                    Text="Absent: 0"/>
+                                <Grid
+                                    ColumnSpacing="10">
 
-                                <TextBlock
-                                    x:Name="LeaveAttendanceText"
-                                    Text="Leave: 0"/>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="25"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Micro"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"/>
+
+                                    <ProgressBar
+                                        x:Name="MicroSubscriptionProgress"
+                                        Grid.Column="1"
+                                        Height="8"
+                                        Minimum="0"
+                                        Maximum="1"
+                                        Value="0"
+                                        VerticalAlignment="Center"/>
+
+                                    <TextBlock
+                                        x:Name="MicroSubscriptionCountText"
+                                        Grid.Column="2"
+                                        Text="0"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Right"
+                                        FontSize="12"/>
+
+                                </Grid>
+
+
+                                <!-- SMALL -->
+
+                                <Grid
+                                    ColumnSpacing="10">
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="25"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Small"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"/>
+
+                                    <ProgressBar
+                                        x:Name="SmallSubscriptionProgress"
+                                        Grid.Column="1"
+                                        Height="8"
+                                        Minimum="0"
+                                        Maximum="1"
+                                        Value="0"
+                                        VerticalAlignment="Center"/>
+
+                                    <TextBlock
+                                        x:Name="SmallSubscriptionCountText"
+                                        Grid.Column="2"
+                                        Text="0"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Right"
+                                        FontSize="12"/>
+
+                                </Grid>
+
+
+                                <!-- MEDIUM -->
+
+                                <Grid
+                                    ColumnSpacing="10">
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="25"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Medium"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"/>
+
+                                    <ProgressBar
+                                        x:Name="MediumSubscriptionProgress"
+                                        Grid.Column="1"
+                                        Height="8"
+                                        Minimum="0"
+                                        Maximum="1"
+                                        Value="0"
+                                        VerticalAlignment="Center"/>
+
+                                    <TextBlock
+                                        x:Name="MediumSubscriptionCountText"
+                                        Grid.Column="2"
+                                        Text="0"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Right"
+                                        FontSize="12"/>
+
+                                </Grid>
 
                             </StackPanel>
 
@@ -913,10 +1847,580 @@
 
                     </Grid>
 
+                    <!-- RECENT SUBSCRIPTIONS -->
+
+                    <StackPanel
+                        Spacing="8"
+                        Margin="0,10,0,0">
+
+                        <TextBlock
+                            Text="Recent Subscriptions"
+                            FontSize="15"
+                            FontWeight="SemiBold"/>
+
+                        <ListView
+                            x:Name="RecentSubscriptionsListView"
+                            MaxHeight="190"
+                            SelectionMode="None">
+
+                            <ListView.ItemTemplate>
+
+                                <DataTemplate>
+
+                                    <Grid
+                                        Padding="8"
+                                        ColumnSpacing="12">
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="130"/>
+                                            <ColumnDefinition Width="80"/>
+                                        </Grid.ColumnDefinitions>
+
+
+                                        <!-- COMPANY + PLAN -->
+
+                                        <StackPanel
+                                            Grid.Column="0"
+                                            Spacing="2">
+
+                                            <TextBlock
+                                                Text="{Binding CompanyName}"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                Text="{Binding PlanName}"
+                                                FontSize="11"
+                                                Opacity="0.6"/>
+
+                                        </StackPanel>
+
+
+                                        <!-- ENTERPRISE TYPE -->
+
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="{Binding EnterpriseType}"
+                                            VerticalAlignment="Center"
+                                            Opacity="0.8"/>
+
+
+                                        <!-- DATES -->
+
+                                        <StackPanel
+                                            Grid.Column="2"
+                                            Spacing="2"
+                                            VerticalAlignment="Center">
+
+                                            <TextBlock
+                                                Text="{Binding StartDateText}"
+                                                FontSize="11"/>
+
+                                            <TextBlock
+                                                Text="{Binding EndDateText}"
+                                                FontSize="11"
+                                                Opacity="0.6"/>
+
+                                        </StackPanel>
+
+
+                                        <!-- STATUS -->
+
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            Text="{Binding Status}"
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Opacity="0.8"/>
+
+                                    </Grid>
+
+                                </DataTemplate>
+
+                            </ListView.ItemTemplate>
+
+                        </ListView>
+
+                    </StackPanel>
+                    <!-- ====================================== -->
+                    <!-- QUICK INFORMATION -->
+                    <!-- ====================================== -->
+
+                    <!-- USERS OVERVIEW -->
+
+                    <Border
+                        Grid.Column="0"
+                        Grid.ColumnSpan="2"
+                        Padding="22"
+                        CornerRadius="12"
+                        Background="{StaticResource DashboardCardBrush}"
+                        BorderBrush="{StaticResource DashboardBorderBrush}"
+                        BorderThickness="1">
+
+                                            <StackPanel
+                            Spacing="16">
+
+                                                <StackPanel
+                                Spacing="3">
+
+                                                    <TextBlock
+                                    Text="Users Overview"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"/>
+
+                                                    <TextBlock
+                                    Text="Monitor system users, their roles, and account status."
+                                    FontSize="12"
+                                    Opacity="0.6"/>
+
+                                                </StackPanel>
+
+
+                                                <!-- USER STATISTICS -->
+
+                                                <Grid
+                                ColumnSpacing="12">
+
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+
+                                                    <!-- TOTAL USERS -->
+
+                                                    <Border
+                                    Grid.Column="0"
+                                    Padding="16"
+                                    CornerRadius="8"
+                                    Background="#1A8B5CF6">
+
+                                                        <StackPanel
+                                        Spacing="4">
+
+                                                            <TextBlock
+                                            Text="Total Users"
+                                            FontWeight="SemiBold"/>
+
+                                                            <TextBlock
+                                            x:Name="SuperAdminUsersTotalText"
+                                            Text="0"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"/>
+
+                                                            <TextBlock
+                                            Text="System users"
+                                            FontSize="11"
+                                            Opacity="0.6"/>
+
+                                                        </StackPanel>
+
+                                                    </Border>
+
+
+                                                    <!-- ACTIVE USERS -->
+
+                                                    <Border
+                                    Grid.Column="1"
+                                    Padding="16"
+                                    CornerRadius="8"
+                                    Background="#1A22C55E">
+
+                                                        <StackPanel
+                                        Spacing="4">
+
+                                                            <TextBlock
+                                            Text="Active Users"
+                                            FontWeight="SemiBold"/>
+
+                                                            <TextBlock
+                                            x:Name="SuperAdminActiveUsersText"
+                                            Text="0"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"/>
+
+                                                            <TextBlock
+                                            Text="Currently active"
+                                            FontSize="11"
+                                            Opacity="0.6"/>
+
+                                                        </StackPanel>
+
+                                                    </Border>
+
+
+                                                    <!-- ADMIN USERS -->
+
+                                                    <Border
+                                    Grid.Column="2"
+                                    Padding="16"
+                                    CornerRadius="8"
+                                    Background="#1A8B5CF6">
+
+                                                        <StackPanel
+                                        Spacing="4">
+
+                                                            <TextBlock
+                                            Text="Admin Users"
+                                            FontWeight="SemiBold"/>
+
+                                                            <TextBlock
+                                            x:Name="SuperAdminAdminUsersText"
+                                            Text="0"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"/>
+
+                                                            <TextBlock
+                                            Text="Administrative accounts"
+                                            FontSize="11"
+                                            Opacity="0.6"/>
+
+                                                        </StackPanel>
+
+                                                    </Border>
+
+
+                                                    <!-- STAFF USERS -->
+
+                                                    <Border
+                                    Grid.Column="3"
+                                    Padding="16"
+                                    CornerRadius="8"
+                                    Background="#1A9333EA">
+
+                                                        <StackPanel
+                                        Spacing="4">
+
+                                                            <TextBlock
+                                            Text="Staff Users"
+                                            FontWeight="SemiBold"/>
+
+                                                            <TextBlock
+                                            x:Name="SuperAdminStaffUsersText"
+                                            Text="0"
+                                            FontSize="22"
+                                            FontWeight="SemiBold"/>
+
+                                                            <TextBlock
+                                            Text="Non-admin accounts"
+                                            FontSize="11"
+                                            Opacity="0.6"/>
+
+                                                        </StackPanel>
+
+                                                    </Border>
+
+                                                </Grid>
+
+
+                                                <!-- USER ROLE SUMMARY -->
+
+                                                <StackPanel
+                                Spacing="8">
+
+                                                    <TextBlock
+                                    Text="Users by Role"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+
+                                                    <TextBlock
+                                    x:Name="SuperAdminUserRoleSummaryText"
+                                    Text="Loading..."
+                                    FontSize="12"
+                                    Opacity="0.7"
+                                    TextWrapping="Wrap"/>
+
+                                                </StackPanel>
+
+
+                                                <!-- RECENT USERS -->
+
+                                                <StackPanel
+                                Spacing="8">
+
+                                                    <TextBlock
+                                    Text="Users"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+
+                                                    <ListView
+                                    x:Name="SuperAdminUsersListView"
+                                    MaxHeight="220"
+                                    SelectionMode="None">
+
+                                                        <ListView.ItemTemplate>
+
+                                                            <DataTemplate>
+
+                                                            <Grid
+                                                Padding="8"
+                                                ColumnSpacing="12">
+
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="140"/>
+                                                    <ColumnDefinition Width="160"/>
+                                                    <ColumnDefinition Width="100"/>
+                                                </Grid.ColumnDefinitions>
+
+
+                                                <!-- USER -->
+
+                                                <StackPanel
+                                Grid.Column="0"
+                                Spacing="2">
+
+                                                    <TextBlock
+                                    Text="{Binding UserName}"
+                                    FontWeight="SemiBold"/>
+
+                                                    <TextBlock
+                                    Text="{Binding Email}"
+                                    FontSize="11"
+                                    Opacity="0.6"/>
+
+                                                </StackPanel>
+
+
+                                                <!-- ROLE -->
+
+                                                <TextBlock
+                                Grid.Column="1"
+                                Text="{Binding Role}"
+                                VerticalAlignment="Center"
+                                Opacity="0.8"/>
+
+
+                                                <!-- COMPANY -->
+
+                                                <TextBlock
+                                Grid.Column="2"
+                                Text="{Binding CompanyName}"
+                                VerticalAlignment="Center"
+                                Opacity="0.8"/>
+
+
+                                                <!-- STATUS -->
+
+                                                <TextBlock
+                                Grid.Column="3"
+                                Text="{Binding Status}"
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                Opacity="0.7"/>
+
+                                            </Grid>
+
+                                        </DataTemplate>
+
+                                    </ListView.ItemTemplate>
+
+                                </ListView>
+
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </Border>
+                    
+                    <!-- =========================================================
+                         SYSTEM ADMINISTRATION
+                         ========================================================= -->
+
+                    <Border
+                        Grid.ColumnSpan="2"
+                        Padding="22"
+                        CornerRadius="12"
+                        Background="{StaticResource DashboardCardBrush}"
+                        BorderBrush="{StaticResource DashboardBorderBrush}"
+                        BorderThickness="1"
+                        Margin="0,20,0,0">
+
+                        <StackPanel Spacing="16">
+
+                            <StackPanel Spacing="3">
+                                <TextBlock
+                                    Text="System Administration"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"/>
+
+                                <TextBlock
+                                    Text="Manage system-level settings and records."
+                                    FontSize="12"
+                                    Opacity="0.6"/>
+                            </StackPanel>
+
+                            <Grid
+                                ColumnSpacing="12"
+                                RowSpacing="12">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- COMPANIES -->
+                                <Button
+                                    Grid.Column="0"
+                                    x:Name="ManageCompaniesButton"
+                                    Click="ManageCompaniesButton_Click"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="0">
+
+                                    <Border
+                                        Padding="16"
+                                        CornerRadius="10">
+
+                                        <StackPanel Spacing="6">
+
+                                            <TextBlock
+                                                Text="Companies"
+                                                FontSize="15"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                Text="Manage registered companies."
+                                                FontSize="12"
+                                                Opacity="0.65"
+                                                TextWrapping="Wrap"/>
+
+                                            <TextBlock
+                                                Text="Manage →"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Margin="0,6,0,0"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+                                </Button>
+
+
+                                <!-- USERS -->
+                                <Button
+                                    Grid.Column="1"
+                                    x:Name="ManageUsersButton"
+                                    Click="ManageUsersButton_Click"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="0">
+
+                                    <Border
+                                        Padding="16"
+                                        CornerRadius="10">
+
+                                        <StackPanel Spacing="6">
+
+                                            <TextBlock
+                                                Text="Users"
+                                                FontSize="15"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                Text="Manage system user accounts."
+                                                FontSize="12"
+                                                Opacity="0.65"
+                                                TextWrapping="Wrap"/>
+
+                                            <TextBlock
+                                                Text="Manage →"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Margin="0,6,0,0"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+                                </Button>
+
+
+                                <!-- SUBSCRIPTION PLANS -->
+                                <Button
+                                    Grid.Column="2"
+                                    x:Name="ManageSubscriptionPlansButton"
+                                    Click="ManageSubscriptionPlansButton_Click"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="0">
+
+                                    <Border
+                                        Padding="16"
+                                        CornerRadius="10">
+
+                                        <StackPanel Spacing="6">
+
+                                            <TextBlock
+                                                Text="Subscription Plans"
+                                                FontSize="15"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                Text="Manage plans, prices, and enterprise types."
+                                                FontSize="12"
+                                                Opacity="0.65"
+                                                TextWrapping="Wrap"/>
+
+                                            <TextBlock
+                                                Text="Manage →"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Margin="0,6,0,0"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+                                </Button>
+
+
+                                <!-- TERMS AND CONDITIONS -->
+                                <Button
+                                    Grid.Column="3"
+                                    x:Name="ManageTermsButton"
+                                    Click="ManageTermsButton_Click"
+                                    HorizontalContentAlignment="Stretch"
+                                    Padding="0">
+
+                                    <Border
+                                        Padding="16"
+                                        CornerRadius="10">
+
+                                        <StackPanel Spacing="6">
+
+                                            <TextBlock
+                                                Text="Terms &amp; Conditions"
+                                                FontSize="15"
+                                                FontWeight="SemiBold"/>
+
+                                            <TextBlock
+                                                Text="Manage system terms and conditions."
+                                                FontSize="12"
+                                                Opacity="0.65"
+                                                TextWrapping="Wrap"/>
+
+                                            <TextBlock
+                                                Text="Manage →"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Margin="0,6,0,0"/>
+
+                                        </StackPanel>
+
+                                    </Border>
+                                </Button>
+
+                            </Grid>
+
+                        </StackPanel>
+
+                    </Border>
+
                 </StackPanel>
 
             </Grid>
-
+ 
         </Grid>
 
     </ScrollViewer>

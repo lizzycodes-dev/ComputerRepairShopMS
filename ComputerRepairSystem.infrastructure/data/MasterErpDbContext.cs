@@ -27,6 +27,9 @@ namespace ComputerRepairSystem.infrastructure.data
         public DbSet<Subscription> Subscriptions
             => Set<Subscription>();
 
+        public DbSet<TermsAndConditions> TermsAndConditions
+            => Set<TermsAndConditions>();
+
         public MasterErpDbContext(
             DbContextOptions<MasterErpDbContext> options)
             : base(options)
@@ -198,6 +201,24 @@ namespace ComputerRepairSystem.infrastructure.data
                     .HasForeignKey(x => x.CompanyId)
                     .OnDelete(
                         DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<TermsAndConditions>(entity =>
+            {
+                entity.HasKey(t => t.TermsAndConditionsId);
+
+                entity.Property(t => t.Version)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(t => t.Content)
+                    .IsRequired();
+
+                entity.Property(t => t.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(t => t.IsPublished)
+                    .IsRequired();
             });
         }
     }

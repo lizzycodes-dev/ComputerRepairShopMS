@@ -12,7 +12,6 @@ public class Department
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Relationships
     public ICollection<Employee> Employees { get; set; }
         = new List<Employee>();
 }

@@ -23,8 +23,10 @@
 	<ItemGroup>
 	  <None Remove="Pages\AttendanceManagementPage.xaml" />
 	  <None Remove="Pages\BillingPage.xaml" />
+	  <None Remove="Pages\BranchManagementPage.xaml" />
 	  <None Remove="Pages\CompanyManagementPage.xaml" />
 	  <None Remove="Pages\CustomerManagementPage.xaml" />
+	  <None Remove="Pages\DepartmentManagementPage.xaml" />
 	  <None Remove="Pages\EmployeeManagementPage.xaml" />
 	  <None Remove="Pages\LoginPage.xaml" />
 	  <None Remove="Pages\MySubscriptionPage.xaml" />
@@ -57,6 +59,12 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</None>
+		<Page Update="Pages\DepartmentManagementPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Update="Pages\BranchManagementPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</Page>
 		<Page Update="Pages\MySubscriptionPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</Page>
