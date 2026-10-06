@@ -632,6 +632,9 @@ namespace ComputerRepairSystem.company.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ServiceRequestId"));
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -654,6 +657,8 @@ namespace ComputerRepairSystem.company.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("ServiceRequestId");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("DeviceId");
 
@@ -821,9 +826,6 @@ namespace ComputerRepairSystem.company.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RepairId"));
 
-                    b.Property<int?>("BranchId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Diagnosis")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -850,8 +852,6 @@ namespace ComputerRepairSystem.company.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("RepairId");
-
-                    b.HasIndex("BranchId");
 
                     b.HasIndex("ServiceRequestId")
                         .IsUnique();
@@ -1024,11 +1024,18 @@ namespace ComputerRepairSystem.company.Migrations
 
             modelBuilder.Entity("ComputerRepairSystem.company.Entities.ServiceRequest", b =>
                 {
+                    b.HasOne("ComputerRepairSystem.company.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ComputerRepairSystem.company.Entities.Device", "Device")
                         .WithMany("ServiceRequests")
                         .HasForeignKey("DeviceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
 
                     b.Navigation("Device");
                 });
@@ -1046,11 +1053,6 @@ namespace ComputerRepairSystem.company.Migrations
 
             modelBuilder.Entity("Repair", b =>
                 {
-                    b.HasOne("ComputerRepairSystem.company.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("ComputerRepairSystem.company.Entities.ServiceRequest", "ServiceRequest")
                         .WithOne("Repair")
                         .HasForeignKey("Repair", "ServiceRequestId")
@@ -1061,8 +1063,6 @@ namespace ComputerRepairSystem.company.Migrations
                         .WithMany()
                         .HasForeignKey("TechnicianId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Branch");
 
                     b.Navigation("ServiceRequest");
 

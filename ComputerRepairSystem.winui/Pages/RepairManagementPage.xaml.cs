@@ -322,7 +322,7 @@ public sealed partial class RepairManagementPage : Page
                 EndDate = null,
 
                 TechnicianId = null,
-                BranchId = null
+             
             };
 
             db.Repairs.Add(repair);

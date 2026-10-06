@@ -310,6 +310,11 @@ public class TenantDbContext : DbContext
         {
             entity.HasKey(x => x.ServiceRequestId);
 
+            entity.HasOne(sr => sr.Branch)
+                .WithMany()
+                .HasForeignKey(sr => sr.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             entity.Property(x => x.Description)
                 .HasMaxLength(1000)
                 .IsRequired();
@@ -364,11 +369,6 @@ public class TenantDbContext : DbContext
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasOne(x => x.Branch)
-                .WithMany()
-                .HasForeignKey(x => x.BranchId)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.Restrict);
         });
 
 

@@ -281,6 +281,12 @@ public sealed partial class MainWindow : Window
             MySubscriptionItem.Visibility =
                 Visibility.Visible;
 
+            BranchManagementItem.Visibility =
+                Visibility.Visible;
+
+            DepartmentManagementItem.Visibility =
+                Visibility.Visible;
+
 
             HomeItem.IsSelected =
                 true;

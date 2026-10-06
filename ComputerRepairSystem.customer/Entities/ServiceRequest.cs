@@ -6,6 +6,8 @@ public class ServiceRequest
 
     public int DeviceId { get; set; }
 
+    public int? BranchId { get; set; }
+
     public DateTime RequestDate { get; set; } = DateTime.UtcNow;
 
     public string Description { get; set; } = string.Empty;
@@ -16,6 +18,6 @@ public class ServiceRequest
 
     // Relationships
     public Device Device { get; set; } = null!;
-
+    public Branch? Branch { get; set; }
     public Repair? Repair { get; set; }
 }

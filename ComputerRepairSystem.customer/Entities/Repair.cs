@@ -6,8 +6,6 @@ public class Repair
 
     public int ServiceRequestId { get; set; }
     public int? TechnicianId { get; set; }
-    public int? BranchId { get; set; }
-
     public string? Diagnosis { get; set; }
     public string? RepairDescription { get; set; }
     public string Status { get; set; } = "Pending";
@@ -17,8 +15,6 @@ public class Repair
 
     public ServiceRequest ServiceRequest { get; set; } = null!;
     public Employee? Technician { get; set; } = null!;
-    public Branch? Branch { get; set; } = null!;
-
     public ICollection<RepairItem> RepairItems { get; set; }
         = new List<RepairItem>();
 

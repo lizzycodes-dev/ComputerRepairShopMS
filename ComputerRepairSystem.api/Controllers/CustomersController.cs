@@ -164,7 +164,6 @@ public class CustomersController : ControllerBase
                                                         r.Repair.RepairId,
                                                         r.Repair.ServiceRequestId,
                                                         r.Repair.TechnicianId,
-                                                        r.Repair.BranchId,
                                                         r.Repair.Diagnosis,
                                                         r.Repair.RepairDescription,
                                                         r.Repair.Status,
