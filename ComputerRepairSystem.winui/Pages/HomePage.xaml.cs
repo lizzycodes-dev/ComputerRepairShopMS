@@ -44,6 +44,13 @@ public sealed partial class HomePage : Page
         Loaded += HomePage_Loaded;
     }
 
+    private async void HomePage_Loaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await LoadDashboardAsync();
+    }
+
     private async Task<bool> HasBranchManagementAsync()
     {
         if (CurrentUser.CompanyId == null)
@@ -192,12 +199,7 @@ public sealed partial class HomePage : Page
     // PAGE LOADED
     // ==========================================
 
-    private async void HomePage_Loaded(
-        object sender,
-        RoutedEventArgs e)
-    {
-        await LoadDashboardAsync();
-    }
+
     private void ManageCompaniesButton_Click(
         object sender,
         RoutedEventArgs e)

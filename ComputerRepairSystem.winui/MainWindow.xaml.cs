@@ -118,24 +118,34 @@ public sealed partial class MainWindow : Window
             !NavView.IsPaneOpen;
     }
 
-    private void GlobalBranchComboBox_SelectionChanged(
+    private async void GlobalBranchComboBox_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
         if (!CurrentUser.IsLoggedIn)
             return;
 
-        if (CurrentUser.Role != "Admin")
-            return;
-
-        // Read from the event args, which are populated synchronously.
-        if (e.AddedItems.Count == 0 ||
-            e.AddedItems[0] is not Branch selectedBranch)
+        if (GlobalBranchComboBox.SelectedItem
+            is not Branch selectedBranch)
         {
             return;
         }
 
-        _currentBranchContext.SetBranch(selectedBranch.BranchId);
+        // Regular employees cannot change branches.
+        if (CurrentUser.Role != "Admin")
+            return;
+
+        _currentBranchContext.SetBranch(
+            selectedBranch.BranchId);
+
+        if (NavFrame.Content is HomePage)
+        {
+            var page =
+                App.Services
+                    .GetRequiredService<HomePage>();
+
+            NavFrame.Content = page;
+        }
     }
     // ==========================================
     // SHOW APPLICATION
