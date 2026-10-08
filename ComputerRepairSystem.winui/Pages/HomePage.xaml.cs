@@ -1,14 +1,15 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
 using ComputerRepairSystem_winui.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ComputerRepairSystem_winui.Pages;
 
@@ -20,11 +21,14 @@ public sealed partial class HomePage : Page
     private readonly MasterErpDbContext
         _masterDb;
 
+    private readonly CurrentBranchContext _currentBranchContext;
+
     private int? _selectedDashboardBranchId;
     private bool _branchManagementEnabled;
     public HomePage(
         TenantDbContextFactory tenantDbFactory,
-        MasterErpDbContext masterDb)
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
@@ -33,6 +37,9 @@ public sealed partial class HomePage : Page
 
         _masterDb =
             masterDb;
+
+        _currentBranchContext =
+            currentBranchContext;
 
         Loaded += HomePage_Loaded;
     }
@@ -70,75 +77,16 @@ public sealed partial class HomePage : Page
         _branchManagementEnabled =
             await HasBranchManagementAsync();
 
+        // No Branch Management module
         if (!_branchManagementEnabled)
         {
-            BranchSelectorPanel.Visibility =
-                Visibility.Collapsed;
-
             _selectedDashboardBranchId = null;
-
             return;
         }
 
-        var employee =
-            await db.Employees
-                .AsNoTracking()
-                .FirstOrDefaultAsync(e =>
-                    e.MasterUserId == CurrentUser.UserId &&
-                    e.IsActive);
-
-        if (employee == null)
-        {
-            BranchSelectorPanel.Visibility =
-                Visibility.Collapsed;
-
-            _selectedDashboardBranchId = null;
-
-            return;
-        }
-
-        var branches =
-            await db.Branches
-                .AsNoTracking()
-                .Where(b => b.IsActive)
-                .OrderBy(b => b.BranchName)
-                .ToListAsync();
-
-
-
-        BranchSelectorPanel.Visibility =
-            branches.Count > 0
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-        DashboardBranchComboBox.ItemsSource =
-            branches;
-
-        DashboardBranchComboBox.DisplayMemberPath =
-            "BranchName";
-
-        /*
-         * Default to the employee's assigned branch.
-         */
-        if (employee.BranchId.HasValue)
-        {
-            _selectedDashboardBranchId =
-                employee.BranchId.Value;
-
-            DashboardBranchComboBox.SelectedValue =
-                employee.BranchId.Value;
-        }
-        else if (branches.Count > 0)
-        {
-            /*
-             * Company-level Admin with no BranchId.
-             * Default to the first branch.
-             */
-            _selectedDashboardBranchId =
-                branches[0].BranchId;
-
-            DashboardBranchComboBox.SelectedIndex = 0;
-        }
+        // Use the global branch selector
+        _selectedDashboardBranchId =
+            _currentBranchContext.BranchId;
     }
     private async Task LoadProfitVsExpensesAsync(TenantDbContext db)
     {
@@ -297,168 +245,7 @@ public sealed partial class HomePage : Page
         mainWindow.NavigateToTermsAndConditionsPage();
     }
 
-    private async void DashboardBranchComboBox_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded)
-            return;
 
-        if (!_branchManagementEnabled)
-            return;
-
-        if (DashboardBranchComboBox.SelectedItem
-            is not Branch selectedBranch)
-        {
-            return;
-        }
-
-        _selectedDashboardBranchId =
-            selectedBranch.BranchId;
-
-        await LoadDashboardDataForSelectedBranchAsync();
-    }
-
-    private async Task LoadDashboardDataForSelectedBranchAsync()
-    {
-        if (CurrentUser.CompanyId == null)
-            return;
-
-        try
-        {
-            await using var db =
-                await _tenantDbFactory.CreateAsync(
-                    CurrentUser.CompanyId.Value);
-
-            // KPI
-            var totalRepairsQuery =
-                db.Repairs
-                    .AsNoTracking()
-                    .AsQueryable();
-
-            var pendingRepairsQuery =
-                db.Repairs
-                    .AsNoTracking()
-                    .Where(r =>
-                        r.Status == "Pending");
-
-            var completedRepairsQuery =
-                db.Repairs
-                    .AsNoTracking()
-                    .Where(r =>
-                        r.Status == "Completed");
-
-            var inProgressRepairsQuery =
-                db.Repairs
-                    .AsNoTracking()
-                    .Where(r =>
-                        r.Status == "Diagnosing" ||
-                        r.Status == "In Repair" ||
-                        r.Status == "Ready for Pickup");
-
-            if (_branchManagementEnabled &&
-                _selectedDashboardBranchId.HasValue)
-            {
-                var branchId =
-                    _selectedDashboardBranchId.Value;
-
-                totalRepairsQuery =
-                    totalRepairsQuery.Where(r =>
-                        r.ServiceRequest.BranchId ==
-                        branchId);
-
-                pendingRepairsQuery =
-                    pendingRepairsQuery.Where(r =>
-                        r.ServiceRequest.BranchId ==
-                        branchId);
-
-                completedRepairsQuery =
-                    completedRepairsQuery.Where(r =>
-                        r.ServiceRequest.BranchId ==
-                        branchId);
-
-                inProgressRepairsQuery =
-                    inProgressRepairsQuery.Where(r =>
-                        r.ServiceRequest.BranchId ==
-                        branchId);
-            }
-
-            var totalRepairs =
-                await totalRepairsQuery.CountAsync();
-
-            var pendingRepairs =
-                await pendingRepairsQuery.CountAsync();
-
-            var completedRepairs =
-                await completedRepairsQuery.CountAsync();
-
-            var inProgressRepairs =
-                await inProgressRepairsQuery.CountAsync();
-
-            // REVENUE
-
-            var revenueQuery =
-                db.Payments
-                    .AsNoTracking()
-                    .Where(p =>
-                        p.Status == "Completed");
-
-            if (_branchManagementEnabled &&
-                _selectedDashboardBranchId.HasValue)
-            {
-                var branchId =
-                    _selectedDashboardBranchId.Value;
-
-                revenueQuery =
-                    revenueQuery.Where(p =>
-                        p.Invoice!.Repair!.ServiceRequest!.BranchId ==
-                        branchId);
-            }
-
-            var totalRevenue =
-                await revenueQuery
-                    .Select(p => (decimal?)p.Amount)
-                    .SumAsync()
-                ?? 0;
-
-            // UPDATE UI
-
-            TotalRepairsCountText.Text =
-                totalRepairs.ToString();
-
-            PendingRepairsCountText.Text =
-                pendingRepairs.ToString();
-
-            CompletedRepairsCountText.Text =
-                completedRepairs.ToString();
-
-            TotalRevenueText.Text =
-                $"₱{totalRevenue:N2}";
-
-            // Other dashboard sections
-
-            await LoadRepairOverviewAsync(db);
-            await LoadProfitVsExpensesAsync(db);
-            await LoadSalesTrendsAsync(db);
-            await LoadRecentRepairsAsync(db);
-            await LoadRecentTransactionsAsync(db);
-            await LoadLowStockAsync(db);
-            await LoadOutstandingPaymentsAsync(db);
-            await LoadTodayAttendanceAsync(db);
-
-            UpdateRepairStatus(
-                pendingRepairs,
-                inProgressRepairs,
-                completedRepairs,
-                totalRepairs);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine(
-                "Failed to load selected branch dashboard: " +
-                ex);
-        }
-    }
 
     // ==========================================
     // LOAD DASHBOARD

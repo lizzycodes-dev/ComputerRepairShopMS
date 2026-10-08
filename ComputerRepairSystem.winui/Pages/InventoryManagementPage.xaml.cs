@@ -1,3 +1,4 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
@@ -5,33 +6,96 @@ using ComputerRepairSystem_winui.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+
 namespace ComputerRepairSystem_winui.Pages;
 
 public sealed partial class InventoryManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly MasterErpDbContext _masterDb;
+    private readonly CurrentBranchContext _currentBranchContext;
 
     private List<InventoryDisplayItem> _inventory = new();
 
     public InventoryManagementPage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
         _tenantDbFactory = tenantDbFactory;
+        _masterDb = masterDb;
+        _currentBranchContext = currentBranchContext;
 
         Loaded += InventoryManagementPage_Loaded;
+        Unloaded += InventoryManagementPage_Unloaded;
     }
 
 
     // ==============================
-    // PAGE LOADED
+    // BRANCH MANAGEMENT
+    // ==============================
+
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
+    }
+
+
+    // ==============================
+    // PAGE LOADED / UNLOADED
     // ==============================
 
     private async void InventoryManagementPage_Loaded(
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged +=
+            OnGlobalBranchChanged;
+
+        await LoadInventoryAsync();
+    }
+
+
+    private void InventoryManagementPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _currentBranchContext.BranchChanged -=
+            OnGlobalBranchChanged;
+    }
+
+
+    private async void OnGlobalBranchChanged()
+    {
+        if (!IsLoaded)
+            return;
+
+        SearchBox.Text = string.Empty;
+
         await LoadInventoryAsync();
     }
 
@@ -44,61 +108,142 @@ public sealed partial class InventoryManagementPage : Page
     {
         if (CurrentUser.CompanyId == null)
         {
+            InventoryList.ItemsSource = null;
             return;
         }
 
-        await using var db =
-            await _tenantDbFactory.CreateAsync(
-                CurrentUser.CompanyId.Value);
+        try
+        {
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
 
-        var inventory = await db.Inventories
-            .Include(x => x.Item)
-            .Where(x => x.Item != null)
-            .OrderBy(x => x.Item!.ItemName)
-            .ToListAsync();
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
 
-        var itemIds = inventory
-            .Select(x => x.ItemId)
-            .ToList();
+            int? currentBranchId = null;
 
-        var usedQuantities = await db.RepairItems
-            .Where(x => itemIds.Contains(x.ItemId))
-            .GroupBy(x => x.ItemId)
-            .Select(g => new
+            if (branchManagementEnabled)
             {
-                ItemId = g.Key,
-                Quantity = g.Sum(x => x.Quantity)
-            })
-            .ToDictionaryAsync(
-                x => x.ItemId,
-                x => x.Quantity);
+                currentBranchId =
+                    _currentBranchContext.BranchId;
 
-        _inventory = inventory
-            .Select(x =>
-            {
-                var usedQuantity =
-                    usedQuantities.TryGetValue(
-                        x.ItemId,
-                        out var quantity)
-                        ? quantity
-                        : 0;
-
-                return new InventoryDisplayItem
+                if (currentBranchId == null)
                 {
-                    InventoryId = x.InventoryId,
-                    ItemId = x.ItemId,
-                    ItemName = x.Item!.ItemName,
-                    Category = x.Item.Category,
-                    Brand = x.Item.Brand,
-                    Model = x.Item.Model,
-                    Unit = x.Item.Unit,
-                    QuantityOnHand = x.QuantityOnHand,
-                    AvailableQuantity = x.QuantityOnHand - usedQuantity
-                };
-            })
-            .ToList();
+                    _inventory = new();
+                    InventoryList.ItemsSource = null;
 
-        InventoryList.ItemsSource = _inventory;
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+
+            // ==========================================
+            // LOAD INVENTORY (branch-filtered)
+            // ==========================================
+
+            var inventoryQuery =
+                db.Inventories
+                    .AsNoTracking()
+                    .Include(x => x.Item)
+                    .Where(x => x.Item != null);
+
+            if (branchManagementEnabled)
+            {
+                inventoryQuery = inventoryQuery.Where(x =>
+                    x.BranchId == currentBranchId!.Value);
+            }
+            else
+            {
+                // No branch module -> only company-wide stock
+                inventoryQuery = inventoryQuery.Where(x =>
+                    x.BranchId == null);
+            }
+
+            var inventory =
+                await inventoryQuery
+                    .OrderBy(x => x.Item!.ItemName)
+                    .ToListAsync();
+
+
+            var itemIds =
+                inventory
+                    .Select(x => x.ItemId)
+                    .ToList();
+
+
+            // ==========================================
+            // USED QUANTITIES
+            //
+            // Branch-filtered so one branch's repairs do
+            // not reduce another branch's availability.
+            // ==========================================
+
+            var usedQuery =
+                db.RepairItems
+                    .AsNoTracking()
+                    .Where(x =>
+                        itemIds.Contains(x.ItemId));
+
+            if (branchManagementEnabled)
+            {
+                usedQuery = usedQuery.Where(x =>
+                    x.Repair!.ServiceRequest!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var usedQuantities =
+                await usedQuery
+                    .GroupBy(x => x.ItemId)
+                    .Select(g => new
+                    {
+                        ItemId = g.Key,
+                        Quantity = g.Sum(x => x.Quantity)
+                    })
+                    .ToDictionaryAsync(
+                        x => x.ItemId,
+                        x => x.Quantity);
+
+
+            _inventory =
+                inventory
+                    .Select(x =>
+                    {
+                        var usedQuantity =
+                            usedQuantities.TryGetValue(
+                                x.ItemId,
+                                out var quantity)
+                                ? quantity
+                                : 0;
+
+                        return new InventoryDisplayItem
+                        {
+                            InventoryId = x.InventoryId,
+                            ItemId = x.ItemId,
+                            ItemName = x.Item!.ItemName,
+                            Category = x.Item.Category,
+                            Brand = x.Item.Brand,
+                            Model = x.Item.Model,
+                            Unit = x.Item.Unit,
+                            QuantityOnHand = x.QuantityOnHand,
+                            AvailableQuantity =
+                                x.QuantityOnHand - usedQuantity
+                        };
+                    })
+                    .ToList();
+
+            InventoryList.ItemsSource = _inventory;
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync(
+                "Error Loading Inventory",
+                ex.Message);
+        }
     }
 
 
@@ -107,9 +252,9 @@ public sealed partial class InventoryManagementPage : Page
     // SEARCH
     // ==============================
 
-private void SearchBox_TextChanged(
-    object sender,
-    TextChangedEventArgs e)
+    private void SearchBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
     {
         var search =
             SearchBox.Text.Trim();
@@ -321,124 +466,174 @@ private void SearchBox_TextChanged(
         object sender,
         RoutedEventArgs e)
     {
-if (CurrentUser.CompanyId == null)
-{
-    return;
-}
-
-await using var db =
-    await _tenantDbFactory.CreateAsync(
-        CurrentUser.CompanyId.Value);
-
-
-        var items = await db.InventoryItems
-            .Where(x => x.IsActive)
-            .OrderBy(x => x.ItemName)
-            .ToListAsync();
-
-
-        if (items.Count == 0)
+        if (CurrentUser.CompanyId == null)
         {
-            await ShowMessageAsync(
-                "No Inventory Items",
-                "Add an inventory item first.");
-
             return;
         }
 
-
-        var itemComboBox = new ComboBox
+        try
         {
-            Header = "Inventory Item",
-            PlaceholderText = "Select an item",
-            ItemsSource = items,
-            DisplayMemberPath = "ItemName"
-        };
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
 
 
-        var quantityBox = new NumberBox
-        {
-            Header = "Quantity",
-            Minimum = 1,
-            Value = 1
-        };
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
 
+            int? targetBranchId = null;
 
-        var panel = new StackPanel
-        {
-            Spacing = 12
-        };
-
-        panel.Children.Add(itemComboBox);
-        panel.Children.Add(quantityBox);
-
-
-        var dialog = new ContentDialog
-        {
-            Title = "Add Stock",
-            Content = panel,
-            PrimaryButtonText = "Add Stock",
-            CloseButtonText = "Cancel",
-            XamlRoot = XamlRoot
-        };
-
-
-        var result =
-            await dialog.ShowAsync();
-
-
-        if (result != ContentDialogResult.Primary)
-            return;
-
-
-        if (itemComboBox.SelectedItem is not InventoryItem selectedItem)
-        {
-            await ShowMessageAsync(
-                "No Item Selected",
-                "Please select an inventory item.");
-
-            return;
-        }
-
-
-        var quantity =
-            (decimal)quantityBox.Value;
-
-
-        var inventory =
-            await db.Inventories
-                .FirstOrDefaultAsync(
-                    x =>
-                        x.ItemId == selectedItem.ItemId &&
-                        x.BranchId == null);
-
-
-        if (inventory == null)
-        {
-            inventory = new Inventory
+            if (branchManagementEnabled)
             {
-                ItemId = selectedItem.ItemId,
-                BranchId = null,
-                QuantityOnHand = quantity
+                targetBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (targetBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+
+            var items = await db.InventoryItems
+                .Where(x => x.IsActive)
+                .OrderBy(x => x.ItemName)
+                .ToListAsync();
+
+
+            if (items.Count == 0)
+            {
+                await ShowMessageAsync(
+                    "No Inventory Items",
+                    "Add an inventory item first.");
+
+                return;
+            }
+
+
+            var itemComboBox = new ComboBox
+            {
+                Header = "Inventory Item",
+                PlaceholderText = "Select an item",
+                ItemsSource = items,
+                DisplayMemberPath = "ItemName"
             };
 
-            db.Inventories.Add(inventory);
+
+            var quantityBox = new NumberBox
+            {
+                Header = "Quantity",
+                Minimum = 1,
+                Value = 1
+            };
+
+
+            var panel = new StackPanel
+            {
+                Spacing = 12
+            };
+
+            panel.Children.Add(itemComboBox);
+            panel.Children.Add(quantityBox);
+
+            if (branchManagementEnabled)
+            {
+                // Informational text - no additional picker
+                panel.Children.Add(
+                    new TextBlock
+                    {
+                        Text =
+                            "Stock will be added to the currently selected branch.",
+                        Opacity = 0.7,
+                        TextWrapping = TextWrapping.Wrap
+                    });
+            }
+
+
+            var dialog = new ContentDialog
+            {
+                Title = "Add Stock",
+                Content = panel,
+                PrimaryButtonText = "Add Stock",
+                CloseButtonText = "Cancel",
+                XamlRoot = XamlRoot
+            };
+
+
+            var result =
+                await dialog.ShowAsync();
+
+
+            if (result != ContentDialogResult.Primary)
+                return;
+
+
+            if (itemComboBox.SelectedItem is not InventoryItem selectedItem)
+            {
+                await ShowMessageAsync(
+                    "No Item Selected",
+                    "Please select an inventory item.");
+
+                return;
+            }
+
+
+            var quantity =
+                (decimal)quantityBox.Value;
+
+
+            // ==========================================
+            // FIND OR CREATE INVENTORY ROW
+            //
+            // Uses targetBranchId (the global branch when
+            // branch management is on, otherwise null).
+            // ==========================================
+
+            var inventory =
+                await db.Inventories
+                    .FirstOrDefaultAsync(
+                        x =>
+                            x.ItemId == selectedItem.ItemId &&
+                            x.BranchId == targetBranchId);
+
+
+            if (inventory == null)
+            {
+                inventory = new Inventory
+                {
+                    ItemId = selectedItem.ItemId,
+                    BranchId = targetBranchId,
+                    QuantityOnHand = quantity
+                };
+
+                db.Inventories.Add(inventory);
+            }
+            else
+            {
+                inventory.QuantityOnHand += quantity;
+            }
+
+
+            await db.SaveChangesAsync();
+
+
+            await LoadInventoryAsync();
+
+
+            await ShowMessageAsync(
+                "Stock Added",
+                $"{selectedItem.ItemName} stock has been updated.");
         }
-        else
+        catch (Exception ex)
         {
-            inventory.QuantityOnHand += quantity;
+            await ShowMessageAsync(
+                "Error Adding Stock",
+                ex.Message);
         }
-
-
-        await db.SaveChangesAsync();
-
-
-        await LoadInventoryAsync();
-
-
-        await ShowMessageAsync(
-            "Stock Added",
-            $"{selectedItem.ItemName} stock has been updated.");
     }
 
 

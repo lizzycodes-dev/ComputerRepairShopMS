@@ -1,3 +1,4 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
@@ -11,31 +12,95 @@ namespace ComputerRepairSystem_winui.Pages;
 public sealed partial class FinanceManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly MasterErpDbContext _masterDb;
+    private readonly CurrentBranchContext _currentBranchContext;
 
     public FinanceManagementPage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
         _tenantDbFactory = tenantDbFactory;
+        _masterDb = masterDb;
+        _currentBranchContext = currentBranchContext;
 
         Loaded += FinanceManagementPage_Loaded;
+        Unloaded += FinanceManagementPage_Unloaded;
     }
 
 
     // ==========================================
-    // PAGE LOADED
+    // BRANCH MANAGEMENT
+    // ==========================================
+
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
+    }
+
+
+    // ==========================================
+    // PAGE LOADED / UNLOADED
     // ==========================================
 
     private async void FinanceManagementPage_Loaded(
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged +=
+            OnGlobalBranchChanged;
+
         await LoadInvoicesAsync();
         await LoadPaymentsAsync();
         await LoadExpensesAsync();
         await LoadFinancialReportsAsync();
     }
+
+
+    private void FinanceManagementPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _currentBranchContext.BranchChanged -=
+            OnGlobalBranchChanged;
+    }
+
+
+    private async void OnGlobalBranchChanged()
+    {
+        if (!IsLoaded)
+            return;
+
+        await LoadInvoicesAsync();
+        await LoadPaymentsAsync();
+        await LoadExpensesAsync();
+        await LoadFinancialReportsAsync();
+    }
+
 
     // ==========================================
     // LOAD FINANCIAL REPORTS
@@ -59,22 +124,72 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            // Revenue = completed customer payments
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    ReportRevenueText.Text = "₱0.00";
+                    ReportExpensesText.Text = "₱0.00";
+                    ReportNetIncomeText.Text = "₱0.00";
+                    ReportLastUpdatedText.Text = "Last updated: --";
+
+                    return;
+                }
+            }
+
+            // ==========================================
+            // REVENUE (branch-filtered if enabled)
+            // ==========================================
+
+            var revenueQuery =
+                db.Payments
+                    .AsNoTracking()
+                    .Where(x => x.Status == "Completed");
+
+            if (branchManagementEnabled)
+            {
+                revenueQuery = revenueQuery.Where(x =>
+                    x.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
             var revenue =
-                await db.Payments
-                    .Where(x => x.Status == "Completed")
+                await revenueQuery
                     .SumAsync(x =>
                         (decimal?)x.Amount)
                     ?? 0;
 
-            // Operating expenses = recorded expenses
+
+            // ==========================================
+            // EXPENSES (branch-filtered if enabled)
+            // ==========================================
+
+            var expenseQuery =
+                db.Expenses
+                    .AsNoTracking()
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                expenseQuery = expenseQuery.Where(x =>
+                    x.BranchId ==
+                    currentBranchId!.Value);
+            }
+
             var expenses =
-                await db.Expenses
+                await expenseQuery
                     .SumAsync(x =>
                         (decimal?)x.Amount)
                     ?? 0;
 
-            // Net income = revenue - expenses
             var netIncome =
                 revenue - expenses;
 
@@ -98,6 +213,7 @@ public sealed partial class FinanceManagementPage : Page
         }
     }
 
+
     // ==========================================
     // LOAD INVOICES
     // ==========================================
@@ -116,13 +232,41 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var invoices =
-                await db.Invoices
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    InvoiceList.ItemsSource = null;
+                    return;
+                }
+            }
+
+            var query =
+                db.Invoices
                     .AsNoTracking()
                     .Include(x => x.Repair)
                         .ThenInclude(x => x!.ServiceRequest)
                             .ThenInclude(x => x.Device)
                                 .ThenInclude(x => x.Customer)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.Repair!.ServiceRequest!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var invoices =
+                await query
                     .OrderByDescending(x => x.InvoiceDate)
                     .ToListAsync();
 
@@ -190,13 +334,41 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var invoices =
-                await db.Invoices
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    InvoiceList.ItemsSource = null;
+                    return;
+                }
+            }
+
+            var query =
+                db.Invoices
                     .AsNoTracking()
                     .Include(x => x.Repair)
                         .ThenInclude(x => x!.ServiceRequest)
                             .ThenInclude(x => x.Device)
                                 .ThenInclude(x => x.Customer)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.Repair!.ServiceRequest!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var invoices =
+                await query
                     .OrderByDescending(x => x.InvoiceDate)
                     .ToListAsync();
 
@@ -277,8 +449,32 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var repairs =
-                await db.Repairs
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+            // ==========================================
+            // REPAIRS
+            // ==========================================
+
+            var repairQuery =
+                db.Repairs
                     .AsNoTracking()
                     .Include(x => x.ServiceRequest)
                         .ThenInclude(x => x.Device)
@@ -286,7 +482,17 @@ public sealed partial class FinanceManagementPage : Page
                     .Where(x =>
                         x.Status != "Cancelled" &&
                         !db.Invoices.Any(i =>
-                            i.RepairId == x.RepairId))
+                            i.RepairId == x.RepairId));
+
+            if (branchManagementEnabled)
+            {
+                repairQuery = repairQuery.Where(x =>
+                    x.ServiceRequest.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var repairs =
+                await repairQuery
                     .OrderByDescending(x => x.RepairId)
                     .ToListAsync();
 
@@ -294,7 +500,9 @@ public sealed partial class FinanceManagementPage : Page
             {
                 await ShowMessageAsync(
                     "No Repairs Available",
-                    "There are no repairs available for a new invoice.");
+                    branchManagementEnabled
+                        ? "There are no repairs available for a new invoice in the selected branch."
+                        : "There are no repairs available for a new invoice.");
                 return;
             }
 
@@ -597,8 +805,30 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
             var invoice =
                 await db.Invoices
+                    .Include(x => x.Repair)
+                        .ThenInclude(x => x!.ServiceRequest)
                     .FirstOrDefaultAsync(
                         x => x.InvoiceId == row.InvoiceId);
 
@@ -608,6 +838,23 @@ public sealed partial class FinanceManagementPage : Page
                     "Not Found",
                     "The invoice could not be found.");
                 return;
+            }
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                if (invoice.Repair?.ServiceRequest?.BranchId !=
+                    currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This invoice belongs to a repair in a different branch.");
+
+                    return;
+                }
             }
 
             var invoiceNumberBox =
@@ -879,8 +1126,30 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
             var invoice =
                 await db.Invoices
+                    .Include(x => x.Repair)
+                        .ThenInclude(x => x!.ServiceRequest)
                     .FirstOrDefaultAsync(
                         x =>
                             x.InvoiceId ==
@@ -889,6 +1158,23 @@ public sealed partial class FinanceManagementPage : Page
             if (invoice == null)
             {
                 return;
+            }
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                if (invoice.Repair?.ServiceRequest?.BranchId !=
+                    currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This invoice belongs to a repair in a different branch.");
+
+                    return;
+                }
             }
 
             var hasPayments =
@@ -943,10 +1229,40 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var payments =
-                await db.Payments
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    PaymentList.ItemsSource = null;
+                    return;
+                }
+            }
+
+            var query =
+                db.Payments
                     .AsNoTracking()
                     .Include(x => x.Invoice)
+                        .ThenInclude(x => x!.Repair)
+                            .ThenInclude(x => x!.ServiceRequest)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var payments =
+                await query
                     .OrderByDescending(x => x.PaymentDate)
                     .ToListAsync();
 
@@ -1010,10 +1326,40 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var payments =
-                await db.Payments
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    PaymentList.ItemsSource = null;
+                    return;
+                }
+            }
+
+            var query =
+                db.Payments
                     .AsNoTracking()
                     .Include(x => x.Invoice)
+                        .ThenInclude(x => x!.Repair)
+                            .ThenInclude(x => x!.ServiceRequest)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var payments =
+                await query
                     .OrderByDescending(x => x.PaymentDate)
                     .ToListAsync();
 
@@ -1095,9 +1441,42 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var invoices =
-                await db.Invoices
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+            var invoiceQuery =
+                db.Invoices
                     .AsNoTracking()
+                    .Include(x => x.Repair)
+                        .ThenInclude(x => x!.ServiceRequest)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                invoiceQuery = invoiceQuery.Where(x =>
+                    x.Repair!.ServiceRequest!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var invoices =
+                await invoiceQuery
                     .OrderByDescending(x => x.InvoiceDate)
                     .ToListAsync();
 
@@ -1105,7 +1484,9 @@ public sealed partial class FinanceManagementPage : Page
             {
                 await ShowMessageAsync(
                     "No Invoices",
-                    "Create an invoice before recording a payment.");
+                    branchManagementEnabled
+                        ? "There are no invoices in the selected branch."
+                        : "Create an invoice before recording a payment.");
                 return;
             }
 
@@ -1326,14 +1707,54 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
             var payment =
                 await db.Payments
+                    .Include(x => x.Invoice)
+                        .ThenInclude(x => x!.Repair)
+                            .ThenInclude(x => x!.ServiceRequest)
                     .FirstOrDefaultAsync(
                         x => x.PaymentId == row.PaymentId);
 
             if (payment == null)
             {
                 return;
+            }
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                if (payment.Invoice?.Repair?.ServiceRequest?.BranchId
+                    != currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This payment belongs to an invoice in a different branch.");
+
+                    return;
+                }
             }
 
             var amountBox =
@@ -1570,14 +1991,54 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
             var payment =
                 await db.Payments
+                    .Include(x => x.Invoice)
+                        .ThenInclude(x => x!.Repair)
+                            .ThenInclude(x => x!.ServiceRequest)
                     .FirstOrDefaultAsync(
                         x => x.PaymentId == row.PaymentId);
 
             if (payment == null)
             {
                 return;
+            }
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                if (payment.Invoice?.Repair?.ServiceRequest?.BranchId
+                    != currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This payment belongs to an invoice in a different branch.");
+
+                    return;
+                }
             }
 
             var invoiceId =
@@ -1670,10 +2131,38 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var expenses =
-                await db.Expenses
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    ExpenseList.ItemsSource = null;
+                    return;
+                }
+            }
+
+            var query =
+                db.Expenses
                     .AsNoTracking()
                     .Include(x => x.Branch)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var expenses =
+                await query
                     .OrderByDescending(x => x.ExpenseDate)
                     .ToListAsync();
 
@@ -1734,10 +2223,38 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var expenses =
-                await db.Expenses
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    ExpenseList.ItemsSource = null;
+                    return;
+                }
+            }
+
+            var query =
+                db.Expenses
                     .AsNoTracking()
                     .Include(x => x.Branch)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var expenses =
+                await query
                     .OrderByDescending(x => x.ExpenseDate)
                     .ToListAsync();
 
@@ -1816,6 +2333,19 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            if (branchManagementEnabled &&
+                _currentBranchContext.BranchId == null)
+            {
+                await ShowMessageAsync(
+                    "Branch Not Selected",
+                    "Please select a branch from the global branch selector.");
+
+                return;
+            }
+
             var branches =
                 await db.Branches
                     .AsNoTracking()
@@ -1849,6 +2379,25 @@ public sealed partial class FinanceManagementPage : Page
                     SelectedIndex = 0,
                     MinWidth = 320
                 };
+
+            // ==========================================
+            // DEFAULT TO GLOBAL SELECTED BRANCH
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                var globalBranchId =
+                    _currentBranchContext.BranchId;
+
+                var globalIndex =
+                    branchOptions.FindIndex(x =>
+                        x.BranchId == globalBranchId);
+
+                if (globalIndex >= 0)
+                {
+                    branchBox.SelectedIndex = globalIndex;
+                }
+            }
 
             var categoryBox =
                 new ComboBox
@@ -2036,6 +2585,26 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
             var expense =
                 await db.Expenses
                     .FirstOrDefaultAsync(
@@ -2043,6 +2612,20 @@ public sealed partial class FinanceManagementPage : Page
 
             if (expense == null)
             {
+                return;
+            }
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled &&
+                expense.BranchId != currentBranchId)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "This expense belongs to a different branch.");
+
                 return;
             }
 
@@ -2360,6 +2943,26 @@ public sealed partial class FinanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
             var expense =
                 await db.Expenses
                     .FirstOrDefaultAsync(
@@ -2367,6 +2970,20 @@ public sealed partial class FinanceManagementPage : Page
 
             if (expense == null)
             {
+                return;
+            }
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled &&
+                expense.BranchId != currentBranchId)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "This expense belongs to a different branch.");
+
                 return;
             }
 

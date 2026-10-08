@@ -1,4 +1,9 @@
+using ComputerRepairSystem.company.Context;
+using ComputerRepairSystem.company.Data;
+using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.company.Services;
+using ComputerRepairSystem.infrastructure.data;
+using ComputerRepairSystem.winui.Pages;
 using ComputerRepairSystem_winui.Pages;
 using ComputerRepairSystem_winui.Services;
 using Microsoft.EntityFrameworkCore;
@@ -6,8 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using ComputerRepairSystem.infrastructure.data;
-using ComputerRepairSystem.winui.Pages;
+
 
 namespace ComputerRepairSystem_winui;
 
@@ -18,34 +22,38 @@ public sealed partial class MainWindow : Window
     private readonly SuperAdminSystemSettingsService
     _superAdminSystemSettingsService;
 
+    private readonly CurrentBranchContext
+        _currentBranchContext;
+
+    private readonly ITenantDbContextFactory _tenantDbContextFactory;
+
     // ==========================================
     // CONSTRUCTOR
     // ==========================================
 
-    public MainWindow(SuperAdminSystemSettingsService
-    superAdminSystemSettingsService,
-        SubscriptionAccessService subscriptionAccessService)
+    public MainWindow(
+        SuperAdminSystemSettingsService superAdminSystemSettingsService,
+        SubscriptionAccessService subscriptionAccessService,
+        CurrentBranchContext currentBranchContext,
+        ITenantDbContextFactory tenantDbContextFactory)
     {
         InitializeComponent();
 
-        _subscriptionAccessService =
-            subscriptionAccessService;
-
-        _superAdminSystemSettingsService =
-            superAdminSystemSettingsService;
+        _subscriptionAccessService = subscriptionAccessService;
+        _superAdminSystemSettingsService = superAdminSystemSettingsService;
+        _currentBranchContext = currentBranchContext;
+        _tenantDbContextFactory = tenantDbContextFactory;
 
         ShowLogin();
 
         ExtendsContentIntoTitleBar = true;
-
         SetTitleBar(AppTitleBar);
-
         AppWindow.TitleBar.PreferredHeightOption =
             TitleBarHeightOption.Tall;
-
-        AppWindow.SetIcon(
-            "Assets/AppIcon.ico");
+        AppWindow.SetIcon("Assets/AppIcon.ico");
     }
+
+
 
     private async Task<bool>
         CheckMaintenanceModeAsync()
@@ -110,7 +118,25 @@ public sealed partial class MainWindow : Window
             !NavView.IsPaneOpen;
     }
 
+    private void GlobalBranchComboBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (!CurrentUser.IsLoggedIn)
+            return;
 
+        if (CurrentUser.Role != "Admin")
+            return;
+
+        // Read from the event args, which are populated synchronously.
+        if (e.AddedItems.Count == 0 ||
+            e.AddedItems[0] is not Branch selectedBranch)
+        {
+            return;
+        }
+
+        _currentBranchContext.SetBranch(selectedBranch.BranchId);
+    }
     // ==========================================
     // SHOW APPLICATION
     // ==========================================
@@ -118,6 +144,11 @@ public sealed partial class MainWindow : Window
     public void ShowApplication()
     {
         UpdateUserHeader();
+
+        GlobalBranchComboBox.Visibility =
+            Visibility.Collapsed;
+
+        _ = LoadGlobalBranchesAsync();
 
         // ==========================================
         // HIDE EVERYTHING FIRST
@@ -411,7 +442,153 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async Task LoadGlobalBranchesAsync()
+    {
+        try
+        {
+            // Branch Management is only available
+            // when the company's subscription includes it.
+            var modules =
+                await _subscriptionAccessService
+                    .GetAccessibleModuleCodesAsync();
 
+            if (!modules.Contains("BRANCH", StringComparer.OrdinalIgnoreCase))
+            {
+                GlobalBranchComboBox.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+
+            if (CurrentUser.CompanyId == null)
+            {
+                GlobalBranchComboBox.Visibility =
+                    Visibility.Collapsed;
+
+                return;
+            }
+
+            var db =
+                await _tenantDbContextFactory
+                    .CreateAsync(CurrentUser.CompanyId.Value);
+
+            var branches =
+                await db.Branches
+                    .AsNoTracking()
+                    .Where(b => b.IsActive)
+                    .OrderBy(b => b.BranchName)
+                    .ToListAsync();
+
+            if (branches.Count == 0)
+            {
+                GlobalBranchComboBox.Visibility =
+                    Visibility.Collapsed;
+
+                return;
+            }
+
+            GlobalBranchComboBox.ItemsSource =
+                branches;
+
+            GlobalBranchComboBox.DisplayMemberPath =
+                "BranchName";
+
+            GlobalBranchComboBox.Visibility =
+                Visibility.Visible;
+
+            // ==========================================
+            if (CurrentUser.Role == "Admin")
+            {
+                GlobalBranchComboBox.IsEnabled = true;
+
+                if (_currentBranchContext.BranchId.HasValue)
+                {
+                    GlobalBranchComboBox.SelectedValue =
+                        _currentBranchContext.BranchId.Value;
+
+                    _currentBranchContext.SetBranch(
+                        _currentBranchContext.BranchId.Value);
+                }
+                else
+                {
+                    GlobalBranchComboBox.SelectedIndex = 0;
+
+                    // Explicitly resolve the Branch instance so we don't
+                    // depend on SelectedItem being populated yet.
+                    if (branches.Count > 0)
+                    {
+                        _currentBranchContext.SetBranch(
+                            branches[0].BranchId);
+                    }
+                }
+
+                return;
+            }            // ADMIN
+                         // ==========================================
+            if (CurrentUser.Role == "Admin")
+            {
+                GlobalBranchComboBox.IsEnabled = true;
+
+                if (_currentBranchContext.BranchId.HasValue)
+                {
+                    GlobalBranchComboBox.SelectedValue =
+                        _currentBranchContext.BranchId.Value;
+
+                    _currentBranchContext.SetBranch(
+                        _currentBranchContext.BranchId.Value);
+                }
+                else
+                {
+                    GlobalBranchComboBox.SelectedIndex = 0;
+
+                    // Explicitly resolve the Branch instance so we don't
+                    // depend on SelectedItem being populated yet.
+                    if (branches.Count > 0)
+                    {
+                        _currentBranchContext.SetBranch(
+                            branches[0].BranchId);
+                    }
+                }
+
+                return;
+            }
+
+            // ==========================================
+            // REGULAR EMPLOYEE
+            // ==========================================
+
+            var employee =
+                await db.Employees
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(e =>
+                        e.MasterUserId == CurrentUser.UserId &&
+                        e.IsActive);
+
+            if (employee?.BranchId == null)
+            {
+                GlobalBranchComboBox.Visibility =
+                    Visibility.Collapsed;
+
+                return;
+            }
+
+            // Regular employees can only use
+            // their assigned branch.
+            GlobalBranchComboBox.IsEnabled = false;
+
+            GlobalBranchComboBox.SelectedValue =
+                employee.BranchId.Value;
+
+            _currentBranchContext.SetBranch(
+                employee.BranchId.Value);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+
+            GlobalBranchComboBox.Visibility =
+                Visibility.Collapsed;
+        }
+    }
     // ==========================================
     // APPLY SUBSCRIPTION ACCESS
     // ==========================================
@@ -787,6 +964,9 @@ public sealed partial class MainWindow : Window
 
     public void ShowLogin()
     {
+        GlobalBranchComboBox.Visibility =
+            Visibility.Collapsed;
+
         HomeItem.Visibility =
             Visibility.Collapsed;
 
@@ -849,6 +1029,7 @@ public sealed partial class MainWindow : Window
 
         SuperAdminSystemSettingsItem.Visibility =
             Visibility.Collapsed;
+
 
         HomeItem.IsSelected = false;
 

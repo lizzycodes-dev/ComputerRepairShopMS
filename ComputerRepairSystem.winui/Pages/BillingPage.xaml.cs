@@ -1,3 +1,4 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
@@ -13,16 +14,61 @@ public sealed partial class BillingPage : Page
     private readonly TenantDbContextFactory
         _tenantDbFactory;
 
+    private readonly MasterErpDbContext
+        _masterDb;
+
+    private readonly CurrentBranchContext
+        _currentBranchContext;
+
     public BillingPage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
         _tenantDbFactory =
             tenantDbFactory;
 
+        _masterDb =
+            masterDb;
+
+        _currentBranchContext =
+            currentBranchContext;
+
         Loaded +=
             BillingPage_Loaded;
+
+        Unloaded +=
+            BillingPage_Unloaded;
+    }
+
+
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
     }
 
 
@@ -30,6 +76,27 @@ public sealed partial class BillingPage : Page
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged +=
+            OnGlobalBranchChanged;
+
+        await LoadCompletedRepairsAsync();
+    }
+
+
+    private void BillingPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _currentBranchContext.BranchChanged -=
+            OnGlobalBranchChanged;
+    }
+
+
+    private async void OnGlobalBranchChanged()
+    {
+        if (!IsLoaded)
+            return;
+
         await LoadCompletedRepairsAsync();
     }
 
@@ -38,58 +105,97 @@ public sealed partial class BillingPage : Page
     {
         if (CurrentUser.CompanyId == null)
         {
+            BillingList.ItemsSource = null;
             return;
         }
 
-        await using var db =
-            await _tenantDbFactory.CreateAsync(
-                CurrentUser.CompanyId.Value);
+        try
+        {
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
 
-        var repairs =
-            await db.Repairs
-                .AsNoTracking()
-                .Where(r =>
-                    r.Status == "Completed" &&
-                    r.Invoice == null)
-                .Include(r =>
-                    r.ServiceRequest)
-                    .ThenInclude(sr =>
-                        sr.Device)
-                    .ThenInclude(d =>
-                        d.Customer)
-                .Select(r => new BillingRow
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            var query =
+                db.Repairs
+                    .AsNoTracking()
+                    .Where(r =>
+                        r.Status == "Completed" &&
+                        r.Invoice == null)
+                    .Include(r =>
+                        r.ServiceRequest)
+                        .ThenInclude(sr =>
+                            sr.Device)
+                        .ThenInclude(d =>
+                            d.Customer)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                var currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
                 {
-                    RepairId =
-                        r.RepairId,
+                    BillingList.ItemsSource = null;
 
-                    CustomerName =
-                        r.ServiceRequest
-                            .Device
-                            .Customer
-                            .FirstName
-                        + " "
-                        + r.ServiceRequest
-                            .Device
-                            .Customer
-                            .LastName,
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
 
-                    DeviceName =
-                        r.ServiceRequest
-                            .Device
-                            .Brand
-                        + " "
-                        + r.ServiceRequest
-                            .Device
-                            .Model,
+                    return;
+                }
 
-                    RepairDescription =
-                        r.RepairDescription ??
-                        "No description"
-                })
-                .ToListAsync();
+                query = query.Where(r =>
+                    r.ServiceRequest.BranchId ==
+                    currentBranchId.Value);
+            }
 
-        BillingList.ItemsSource =
-            repairs;
+            var repairs =
+                await query
+                    .Select(r => new BillingRow
+                    {
+                        RepairId =
+                            r.RepairId,
+
+                        CustomerName =
+                            r.ServiceRequest
+                                .Device
+                                .Customer
+                                .FirstName
+                            + " "
+                            + r.ServiceRequest
+                                .Device
+                                .Customer
+                                .LastName,
+
+                        DeviceName =
+                            r.ServiceRequest
+                                .Device
+                                .Brand
+                            + " "
+                            + r.ServiceRequest
+                                .Device
+                                .Model,
+
+                        RepairDescription =
+                            r.RepairDescription ??
+                            "No description"
+                    })
+                    .ToListAsync();
+
+            BillingList.ItemsSource =
+                repairs;
+        }
+        catch (Exception ex)
+        {
+            BillingList.ItemsSource = null;
+
+            System.Diagnostics.Debug.WriteLine(
+                "Failed to load completed repairs: " + ex);
+        }
     }
 
 
@@ -138,6 +244,38 @@ public sealed partial class BillingPage : Page
         if (repair == null)
         {
             return;
+        }
+
+        // ==========================================
+        // BRANCH SAFETY CHECK
+        // ==========================================
+
+        var branchManagementEnabled =
+            await HasBranchManagementAsync();
+
+        if (branchManagementEnabled)
+        {
+            var currentBranchId =
+                _currentBranchContext.BranchId;
+
+            if (currentBranchId == null)
+            {
+                await ShowMessageAsync(
+                    "Branch Not Selected",
+                    "Please select a branch from the global branch selector.");
+
+                return;
+            }
+
+            if (repair.ServiceRequest.BranchId !=
+                currentBranchId.Value)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "This repair belongs to a different branch than the one currently selected.");
+
+                return;
+            }
         }
 
         var subtotal =

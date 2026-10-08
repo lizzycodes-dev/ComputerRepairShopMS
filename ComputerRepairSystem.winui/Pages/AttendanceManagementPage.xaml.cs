@@ -1,3 +1,4 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
@@ -12,6 +13,8 @@ namespace ComputerRepairSystem_winui.Pages;
 public sealed partial class AttendanceManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly MasterErpDbContext _masterDb;
+    private readonly CurrentBranchContext _currentBranchContext;
 
     private List<AttendanceRow> _attendanceRecords = new();
 
@@ -19,24 +22,84 @@ public sealed partial class AttendanceManagementPage : Page
 
 
     public AttendanceManagementPage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
         _tenantDbFactory = tenantDbFactory;
 
+        _masterDb = masterDb;
+
+        _currentBranchContext = currentBranchContext;
+
         Loaded += AttendanceManagementPage_Loaded;
+        Unloaded += AttendanceManagementPage_Unloaded;
     }
 
 
     // ==========================================
-    // PAGE LOADED
+    // BRANCH MANAGEMENT
+    // ==========================================
+
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
+    }
+
+
+    // ==========================================
+    // PAGE LOADED / UNLOADED
     // ==========================================
 
     private async void AttendanceManagementPage_Loaded(
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged +=
+            OnGlobalBranchChanged;
+
+        await LoadAttendanceAsync();
+    }
+
+
+    private void AttendanceManagementPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _currentBranchContext.BranchChanged -=
+            OnGlobalBranchChanged;
+    }
+
+
+    private async void OnGlobalBranchChanged()
+    {
+        if (!IsLoaded)
+            return;
+
         await LoadAttendanceAsync();
     }
 
@@ -59,10 +122,43 @@ public sealed partial class AttendanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var attendance =
-                await db.Attendances
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            var query =
+                db.Attendances
                     .AsNoTracking()
                     .Include(x => x.Employee)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                var currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    _attendanceRecords = new();
+
+                    AttendanceListView.ItemsSource = null;
+
+                    EditAttendanceButton.IsEnabled = false;
+                    DeleteAttendanceButton.IsEnabled = false;
+
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+
+                query = query.Where(x =>
+                    x.Employee!.BranchId ==
+                    currentBranchId.Value);
+            }
+
+            var attendance =
+                await query
                     .OrderByDescending(x => x.AttendanceDate)
                     .ThenByDescending(x => x.TimeIn)
                     .ToListAsync();
@@ -180,10 +276,46 @@ public sealed partial class AttendanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var employees =
-                await db.Employees
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+
+            // ==========================================
+            // EMPLOYEES (branch-filtered if enabled)
+            // ==========================================
+
+            var employeesQuery =
+                db.Employees
                     .AsNoTracking()
-                    .Where(x => x.IsActive)
+                    .Where(x => x.IsActive);
+
+            if (branchManagementEnabled)
+            {
+                employeesQuery =
+                    employeesQuery.Where(x =>
+                        x.BranchId ==
+                        currentBranchId!.Value);
+            }
+
+            var employees =
+                await employeesQuery
                     .OrderBy(x => x.LastName)
                     .ThenBy(x => x.FirstName)
                     .ToListAsync();
@@ -192,7 +324,9 @@ public sealed partial class AttendanceManagementPage : Page
             {
                 await ShowMessageAsync(
                     "No Employees",
-                    "There are no active employees available.");
+                    branchManagementEnabled
+                        ? "There are no active employees in the selected branch."
+                        : "There are no active employees available.");
 
                 return;
             }
@@ -353,6 +487,18 @@ public sealed partial class AttendanceManagementPage : Page
                 return;
             }
 
+            // Branch safety: employee must belong to selected branch
+            if (branchManagementEnabled &&
+                selectedEmployee.Employee.BranchId !=
+                    currentBranchId)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "The selected employee does not belong to the currently selected branch.");
+
+                return;
+            }
+
             if (!datePicker.Date.HasValue)
             {
                 await ShowMessageAsync(
@@ -481,8 +627,30 @@ public sealed partial class AttendanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+
             var attendance =
                 await db.Attendances
+                    .Include(x => x.Employee)
                     .FirstOrDefaultAsync(
                         x =>
                             x.AttendanceId ==
@@ -499,10 +667,40 @@ public sealed partial class AttendanceManagementPage : Page
             }
 
 
-            var employees =
-                await db.Employees
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                if (attendance.Employee == null ||
+                    attendance.Employee.BranchId !=
+                        currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This attendance record belongs to an employee in a different branch.");
+
+                    return;
+                }
+            }
+
+
+            var employeesQuery =
+                db.Employees
                     .AsNoTracking()
-                    .Where(x => x.IsActive)
+                    .Where(x => x.IsActive);
+
+            if (branchManagementEnabled)
+            {
+                employeesQuery =
+                    employeesQuery.Where(x =>
+                        x.BranchId ==
+                        currentBranchId!.Value);
+            }
+
+            var employees =
+                await employeesQuery
                     .OrderBy(x => x.LastName)
                     .ThenBy(x => x.FirstName)
                     .ToListAsync();
@@ -644,6 +842,18 @@ public sealed partial class AttendanceManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Please select an employee.");
+
+                return;
+            }
+
+            // Branch safety: employee must belong to selected branch
+            if (branchManagementEnabled &&
+                selectedEmployee.Employee.BranchId !=
+                    currentBranchId)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "The selected employee does not belong to the currently selected branch.");
 
                 return;
             }
@@ -792,8 +1002,30 @@ public sealed partial class AttendanceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+
             var attendance =
                 await db.Attendances
+                    .Include(x => x.Employee)
                     .FirstOrDefaultAsync(
                         x =>
                             x.AttendanceId ==
@@ -807,6 +1039,25 @@ public sealed partial class AttendanceManagementPage : Page
 
                 await LoadAttendanceAsync();
                 return;
+            }
+
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                if (attendance.Employee == null ||
+                    attendance.Employee.BranchId !=
+                        currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This attendance record belongs to an employee in a different branch.");
+
+                    return;
+                }
             }
 
 

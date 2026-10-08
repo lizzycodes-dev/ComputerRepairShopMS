@@ -1,4 +1,5 @@
-﻿using ComputerRepairSystem.company.Data;
+﻿using ComputerRepairSystem.company.Context;
+using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Interfaces;
 using ComputerRepairSystem.company.Repositories;
 using ComputerRepairSystem.company.Services;
@@ -64,7 +65,7 @@ public partial class App : Application
                     masterConnectionString));
 
         services.AddTransient<TenantDbContextFactory>();
-
+        
         services.AddTransient<ITenantDbContextFactory>(
             provider =>
                 provider.GetRequiredService<TenantDbContextFactory>());
@@ -162,6 +163,10 @@ public partial class App : Application
         services.AddTransient<SuperAdminSystemSettingsPage>();
 
         services.AddSingleton<SuperAdminSystemSettingsService>();
+
+        services.AddSingleton<CurrentBranchContext>();
+
+        services.AddSingleton<MasterErpDbContext>();
         // ==========================================
         // MAIN WINDOW
         // ==========================================

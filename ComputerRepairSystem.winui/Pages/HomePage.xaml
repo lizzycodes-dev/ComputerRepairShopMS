@@ -75,7 +75,6 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
 
@@ -95,27 +94,9 @@
 
                     </StackPanel>
 
+
                     <StackPanel
                         Grid.Column="1"
-                        x:Name="BranchSelectorPanel"
-                        Margin="30,0,30,0"
-                        VerticalAlignment="Center"
-                        Spacing="4">
-
-                        <TextBlock
-                            Text="Branch"
-                            FontSize="12"
-                            Opacity="0.6"/>
-
-                        <ComboBox
-                            x:Name="DashboardBranchComboBox"
-                            Width="180"
-                            SelectionChanged="DashboardBranchComboBox_SelectionChanged"/>
-
-                    </StackPanel>
-
-                    <StackPanel
-                        Grid.Column="2"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Spacing="2">
@@ -134,7 +115,6 @@
                     </StackPanel>
 
                 </Grid>
-
 
 
                 <!-- ====================================== -->

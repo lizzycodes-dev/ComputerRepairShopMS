@@ -1,3 +1,4 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
@@ -11,26 +12,86 @@ namespace ComputerRepairSystem_winui.Pages;
 public sealed partial class PurchaseManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly MasterErpDbContext _masterDb;
+    private readonly CurrentBranchContext _currentBranchContext;
 
     public PurchaseManagementPage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
         _tenantDbFactory = tenantDbFactory;
+        _masterDb = masterDb;
+        _currentBranchContext = currentBranchContext;
 
         Loaded += PurchaseManagementPage_Loaded;
+        Unloaded += PurchaseManagementPage_Unloaded;
     }
 
 
     // ==========================================
-    // PAGE LOAD
+    // BRANCH MANAGEMENT
+    // ==========================================
+
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
+    }
+
+
+    // ==========================================
+    // PAGE LOADED / UNLOADED
     // ==========================================
 
     private async void PurchaseManagementPage_Loaded(
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged +=
+            OnGlobalBranchChanged;
+
+        await LoadPurchasesAsync();
+    }
+
+
+    private void PurchaseManagementPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _currentBranchContext.BranchChanged -=
+            OnGlobalBranchChanged;
+    }
+
+
+    private async void OnGlobalBranchChanged()
+    {
+        if (!IsLoaded)
+            return;
+
         await LoadPurchasesAsync();
     }
 
@@ -49,10 +110,53 @@ public sealed partial class PurchaseManagementPage : Page
             await using var db =
                 await _tenantDbFactory.CreateAsync(CurrentUser.CompanyId.Value);
 
-            var purchases =
-                await db.PurchaseOrders
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    PurchaseListView.ItemsSource = null;
+
+                    PurchaseItemsListView.ItemsSource = null;
+
+                    PurchaseNumberText.Text = "—";
+                    SupplierText.Text = "—";
+                    PurchaseDateText.Text = "—";
+                    PurchaseStatusText.Text = "—";
+                    SelectedPurchaseTotalText.Text = "₱0.00";
+
+                    EmptyStateText.Visibility =
+                        Visibility.Visible;
+
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+            var query =
+                db.PurchaseOrders
                     .AsNoTracking()
                     .Include(x => x.Supplier)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.BranchId == currentBranchId!.Value);
+            }
+
+            var purchases =
+                await query
                     .OrderByDescending(x => x.PurchaseDate)
                     .Select(x => new PurchaseDisplayItem
                     {
@@ -146,6 +250,26 @@ public sealed partial class PurchaseManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
             var purchase =
                 await db.PurchaseOrders
                     .AsNoTracking()
@@ -157,6 +281,20 @@ public sealed partial class PurchaseManagementPage : Page
 
             if (purchase == null)
                 return;
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled &&
+                purchase.BranchId != currentBranchId)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "This purchase belongs to a different branch.");
+
+                return;
+            }
 
             PurchaseNumberText.Text =
                 purchase.PurchaseOrderNumber;
@@ -221,7 +359,28 @@ public sealed partial class PurchaseManagementPage : Page
 
 
             await using var db =
-                await _tenantDbFactory.CreateAsync(        CurrentUser.CompanyId.Value);
+                await _tenantDbFactory.CreateAsync(CurrentUser.CompanyId.Value);
+
+
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
 
 
             // ==========================================
@@ -247,15 +406,17 @@ public sealed partial class PurchaseManagementPage : Page
 
 
             // ==========================================
-            // LOAD BRANCHES
+            // LOAD BRANCHES (only when branch module is on)
             // ==========================================
 
             var branches =
-                await db.Branches
-                    .AsNoTracking()
-                    .Where(x => x.IsActive)
-                    .OrderBy(x => x.BranchName)
-                    .ToListAsync();
+                branchManagementEnabled
+                    ? await db.Branches
+                        .AsNoTracking()
+                        .Where(x => x.IsActive)
+                        .OrderBy(x => x.BranchName)
+                        .ToListAsync()
+                    : new List<Branch>();
 
 
             // ==========================================
@@ -296,21 +457,43 @@ public sealed partial class PurchaseManagementPage : Page
 
 
             // ==========================================
-            // BRANCH
+            // BRANCH (only when branch module is on)
             // ==========================================
 
-            var branchBox =
-                new ComboBox
-                {
-                    Header = "Branch",
-                    ItemsSource = branches,
-                    DisplayMemberPath = "BranchName",
-                    Width = 350
-                };
+            ComboBox? branchBox = null;
 
-            if (branches.Count > 0)
+            if (branchManagementEnabled)
             {
-                branchBox.SelectedIndex = 0;
+                branchBox =
+                    new ComboBox
+                    {
+                        Header = "Branch",
+                        ItemsSource = branches,
+                        DisplayMemberPath = "BranchName",
+                        Width = 350
+                    };
+
+                // ======================================
+                // DEFAULT TO GLOBAL SELECTED BRANCH
+                // ======================================
+
+                var globalBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (globalBranchId.HasValue)
+                {
+                    var index =
+                        branches.FindIndex(x =>
+                            x.BranchId ==
+                            globalBranchId.Value);
+
+                    branchBox.SelectedIndex =
+                        index >= 0 ? index : 0;
+                }
+                else if (branches.Count > 0)
+                {
+                    branchBox.SelectedIndex = 0;
+                }
             }
 
 
@@ -566,7 +749,12 @@ public sealed partial class PurchaseManagementPage : Page
 
 
             content.Children.Add(supplierBox);
-            content.Children.Add(branchBox);
+
+            if (branchBox != null)
+            {
+                content.Children.Add(branchBox);
+            }
+
             content.Children.Add(purchaseDatePicker);
             content.Children.Add(statusBox);
             content.Children.Add(itemBox);
@@ -647,6 +835,37 @@ public sealed partial class PurchaseManagementPage : Page
 
 
             // ==========================================
+            // RESOLVE BRANCH FOR PURCHASE
+            // ==========================================
+
+            int? purchaseBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                if (branchBox?.SelectedItem
+                    is Branch selectedBranch)
+                {
+                    purchaseBranchId =
+                        selectedBranch.BranchId;
+                }
+                else if (currentBranchId.HasValue)
+                {
+                    purchaseBranchId =
+                        currentBranchId.Value;
+                }
+
+                if (purchaseBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Validation Error",
+                        "Please select a branch for this purchase.");
+
+                    return;
+                }
+            }
+
+
+            // ==========================================
             // CREATE PURCHASE
             // ==========================================
 
@@ -664,10 +883,7 @@ public sealed partial class PurchaseManagementPage : Page
                         selectedSupplier.SupplierId,
 
                     BranchId =
-                        branchBox.SelectedItem
-                            is Branch selectedBranch
-                            ? selectedBranch.BranchId
-                            : null,
+                        purchaseBranchId,
 
                     PurchaseDate =
                         purchaseDatePicker.Date

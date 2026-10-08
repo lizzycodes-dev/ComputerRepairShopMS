@@ -1,3 +1,4 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
@@ -5,6 +6,7 @@ using ComputerRepairSystem_winui.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+
 namespace ComputerRepairSystem_winui.Pages;
 
 public sealed partial class EmployeeManagementPage : Page
@@ -12,13 +14,15 @@ public sealed partial class EmployeeManagementPage : Page
     private readonly TenantDbContextFactory _tenantDbFactory;
     private readonly SubscriptionAccessService
     _subscriptionAccessService;
+    private readonly CurrentBranchContext _currentBranchContext;
 
     private bool _hasBranchModule;
     private List<EmployeeRow> _allEmployees = new();
 
     public EmployeeManagementPage(
         TenantDbContextFactory tenantDbFactory,
-        SubscriptionAccessService subscriptionAccessService)
+        SubscriptionAccessService subscriptionAccessService,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
@@ -27,7 +31,11 @@ public sealed partial class EmployeeManagementPage : Page
         _subscriptionAccessService =
             subscriptionAccessService;
 
+        _currentBranchContext =
+            currentBranchContext;
+
         Loaded += EmployeeManagementPage_Loaded;
+        Unloaded += EmployeeManagementPage_Unloaded;
     }
 
 
@@ -72,13 +80,16 @@ public sealed partial class EmployeeManagementPage : Page
     }
 
     // ==========================================
-    // PAGE LOADED
+    // PAGE LOADED / UNLOADED
     // ==========================================
 
     private async void EmployeeManagementPage_Loaded(
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged +=
+            OnGlobalBranchChanged;
+
         var modules =
             await _subscriptionAccessService
                 .GetAccessibleModuleCodesAsync();
@@ -93,6 +104,25 @@ public sealed partial class EmployeeManagementPage : Page
         await LoadEmployeesAsync();
     }
 
+
+    private void EmployeeManagementPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _currentBranchContext.BranchChanged -=
+            OnGlobalBranchChanged;
+    }
+
+
+    private async void OnGlobalBranchChanged()
+    {
+        if (!IsLoaded)
+            return;
+
+        await LoadEmployeesAsync();
+    }
+
+
     private void ApplyBranchColumnVisibility()
     {
         BranchHeaderColumn.Width =
@@ -105,6 +135,8 @@ public sealed partial class EmployeeManagementPage : Page
                 ? Visibility.Visible
                 : Visibility.Collapsed;
     }
+
+
     // ==========================================
     // LOAD EMPLOYEES
     // ==========================================
@@ -123,11 +155,40 @@ public sealed partial class EmployeeManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var employees =
-                await db.Employees
+            var query =
+                db.Employees
                     .AsNoTracking()
                     .Include(x => x.Department)
                     .Include(x => x.Branch)
+                    .AsQueryable();
+
+            // ==========================================
+            // BRANCH FILTER
+            //
+            // Only applied when:
+            //   - The company has the Branch module, AND
+            //   - A branch is currently selected globally.
+            //
+            // If no branch is selected globally, show
+            // tenant-wide employees so admins can manage
+            // everyone.
+            // ==========================================
+
+            if (_hasBranchModule)
+            {
+                var currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId.HasValue)
+                {
+                    query = query.Where(x =>
+                        x.BranchId ==
+                        currentBranchId.Value);
+                }
+            }
+
+            var employees =
+                await query
                     .OrderBy(x => x.LastName)
                     .ThenBy(x => x.FirstName)
                     .ToListAsync();
@@ -364,6 +425,21 @@ public sealed partial class EmployeeManagementPage : Page
                 {
                     branchBox.Items.Add(branch);
                 }
+
+                // ======================================
+                // DEFAULT TO GLOBAL SELECTED BRANCH
+                // ======================================
+
+                var globalBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (globalBranchId.HasValue)
+                {
+                    branchBox.SelectedItem =
+                        branches.FirstOrDefault(x =>
+                            x.BranchId ==
+                            globalBranchId.Value);
+                }
             }
 
 
@@ -522,7 +598,7 @@ public sealed partial class EmployeeManagementPage : Page
                 Position =
                     positionBox.Text.Trim(),
 
-                            DepartmentId =
+                DepartmentId =
                 departmentBox.SelectedItem
                     is Department selectedDepartment
                     ? selectedDepartment.DepartmentId
@@ -726,6 +802,24 @@ public sealed partial class EmployeeManagementPage : Page
                             x =>
                                 x.BranchId ==
                                 employee.BranchId.Value);
+                }
+                else
+                {
+                    // ==================================
+                    // NO ASSIGNED BRANCH -> DEFAULT TO
+                    // THE GLOBAL SELECTED BRANCH
+                    // ==================================
+
+                    var globalBranchId =
+                        _currentBranchContext.BranchId;
+
+                    if (globalBranchId.HasValue)
+                    {
+                        branchBox.SelectedItem =
+                            branches.FirstOrDefault(x =>
+                                x.BranchId ==
+                                globalBranchId.Value);
+                    }
                 }
             }
 
@@ -971,13 +1065,6 @@ public sealed partial class EmployeeManagementPage : Page
             await using var db =
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
-
-            var modules =
-                await _subscriptionAccessService
-                    .GetAccessibleModuleCodesAsync();
-
-            var hasBranchModule =
-                modules.Contains("BRANCH");
 
             var employee =
                 await db.Employees

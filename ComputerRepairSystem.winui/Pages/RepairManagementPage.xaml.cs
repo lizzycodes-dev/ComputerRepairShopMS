@@ -1,3 +1,4 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
@@ -12,17 +13,21 @@ public sealed partial class RepairManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
     private readonly MasterErpDbContext _masterDb;
+    private readonly CurrentBranchContext _currentBranchContext;
 
     public RepairManagementPage(
         TenantDbContextFactory tenantDbFactory,
-        MasterErpDbContext masterDb)
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
         _tenantDbFactory = tenantDbFactory;
         _masterDb = masterDb;
+        _currentBranchContext = currentBranchContext;
 
         Loaded += RepairManagementPage_Loaded;
+        Unloaded += RepairManagementPage_Unloaded;
     }
 
     private async Task<bool> HasBranchManagementAsync()
@@ -56,27 +61,29 @@ public sealed partial class RepairManagementPage : Page
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged += OnGlobalBranchChanged;
+
         await LoadServiceRequestsAsync();
         await LoadRepairsAsync();
         await LoadRepairHistoryAsync();
     }
 
-    private async Task<int?> GetCurrentBranchIdAsync(
-        TenantDbContext db)
+    private void RepairManagementPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(CurrentUser.UserId))
-            return null;
-
-        var employee =
-            await db.Employees
-                .AsNoTracking()
-                .FirstOrDefaultAsync(e =>
-                    e.MasterUserId == CurrentUser.UserId &&
-                    e.IsActive);
-
-        return employee?.BranchId;
+        _currentBranchContext.BranchChanged -= OnGlobalBranchChanged;
     }
 
+    private async void OnGlobalBranchChanged()
+    {
+        if (!IsLoaded)
+            return;
+
+        await LoadServiceRequestsAsync();
+        await LoadRepairsAsync();
+        await LoadRepairHistoryAsync();
+    }
 
     private async Task LoadServiceRequestsAsync()
     {
@@ -108,15 +115,15 @@ public sealed partial class RepairManagementPage : Page
             if (branchManagementEnabled)
             {
                 var currentBranchId =
-                    await GetCurrentBranchIdAsync(db);
+                    _currentBranchContext.BranchId;
 
                 if (currentBranchId == null)
                 {
                     ServiceRequestList.ItemsSource = null;
 
                     await ShowMessageAsync(
-                        "Branch Not Assigned",
-                        "The logged-in employee is not assigned to a branch.");
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
 
                     return;
                 }
@@ -424,14 +431,17 @@ public sealed partial class RepairManagementPage : Page
             if (branchManagementEnabled)
             {
                 // ======================================
-                // CHECK EMPLOYEE BRANCH
+                // GET THE GLOBALLY SELECTED BRANCH
                 // ======================================
 
-                if (technician.BranchId == null)
+                var currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
                 {
                     await ShowMessageAsync(
-                        "Branch Not Assigned",
-                        "The logged-in employee is not assigned to a branch.");
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
 
                     return;
                 }
@@ -449,11 +459,11 @@ public sealed partial class RepairManagementPage : Page
                     return;
                 }
 
-                if (serviceRequest.BranchId != technician.BranchId)
+                if (serviceRequest.BranchId != currentBranchId.Value)
                 {
                     await ShowMessageAsync(
                         "Access Denied",
-                        "This service request belongs to a different branch.");
+                        "This service request belongs to a different branch than the one currently selected.");
 
                     return;
                 }
@@ -561,7 +571,7 @@ public sealed partial class RepairManagementPage : Page
             if (branchManagementEnabled)
             {
                 var currentBranchId =
-                    await GetCurrentBranchIdAsync(db);
+                    _currentBranchContext.BranchId;
 
                 if (currentBranchId == null)
                 {
@@ -624,7 +634,7 @@ public sealed partial class RepairManagementPage : Page
             if (branchManagementEnabled)
             {
                 var currentBranchId =
-                    await GetCurrentBranchIdAsync(db);
+                    _currentBranchContext.BranchId;
 
                 if (currentBranchId == null)
                 {
@@ -673,7 +683,9 @@ public sealed partial class RepairManagementPage : Page
                     CurrentUser.CompanyId.Value);
 
             // ==========================================
-            // GET CURRENT EMPLOYEE
+            // GET CURRENT EMPLOYEE (still needed for
+            // ownership record when creating RepairItems
+            // and identity checks)
             // ==========================================
 
             var technician =
@@ -704,17 +716,17 @@ public sealed partial class RepairManagementPage : Page
 
             if (branchManagementEnabled)
             {
-                if (technician.BranchId == null)
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
                 {
                     await ShowMessageAsync(
-                        "Branch Not Assigned",
-                        "The logged-in employee is not assigned to a branch.");
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
 
                     return;
                 }
-
-                currentBranchId =
-                    technician.BranchId.Value;
             }
 
             // ==========================================
@@ -1208,7 +1220,7 @@ public sealed partial class RepairManagementPage : Page
                         selectedInventory.BranchId != currentBranchId)
                     {
                         addItemMessage.Text =
-                            "This inventory item does not belong to your branch.";
+                            "This inventory item does not belong to the selected branch.";
 
                         return;
                     }
@@ -1301,14 +1313,24 @@ public sealed partial class RepairManagementPage : Page
                     // RELOAD CURRENT BRANCH INVENTORY
                     // ==================================
 
-                    var updatedInventory =
-                        await db.Inventories
+                    var updatedInventoryQuery =
+                        db.Inventories
                             .Include(i => i.Item)
                             .Where(i =>
-                                i.BranchId == currentBranchId &&
                                 i.QuantityOnHand > 0 &&
                                 i.Item != null &&
-                                i.Item.IsActive)
+                                i.Item.IsActive);
+
+                    if (branchManagementEnabled)
+                    {
+                        updatedInventoryQuery =
+                            updatedInventoryQuery.Where(i =>
+                                i.BranchId ==
+                                currentBranchId!.Value);
+                    }
+
+                    var updatedInventory =
+                        await updatedInventoryQuery
                             .OrderBy(
                                 i => i.Item!.ItemName)
                             .ToListAsync();
@@ -1700,12 +1722,36 @@ public sealed partial class RepairManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
             // Load inventory with available stock
-            var inventory =
-                await db.Inventories
+            var inventoryQuery =
+                db.Inventories
                     .AsNoTracking()
                     .Include(x => x.Item)
-                    .Where(x => x.QuantityOnHand > 0)
+                    .Where(x => x.QuantityOnHand > 0);
+
+            if (branchManagementEnabled)
+            {
+                var currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+
+                inventoryQuery = inventoryQuery.Where(x =>
+                    x.BranchId == currentBranchId.Value);
+            }
+
+            var inventory =
+                await inventoryQuery
                     .OrderBy(x => x.Item!.ItemName)
                     .ToListAsync();
 

@@ -2,7 +2,7 @@
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.company.Services;
 using ComputerRepairSystem.infrastructure.data;
-
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem_winui.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.UI.Xaml;
@@ -16,6 +16,7 @@ public sealed partial class ServiceManagementPage : Page
     private readonly CustomerService _customerService;
     private readonly TenantDbContextFactory _tenantDbFactory;
     private readonly MasterErpDbContext _masterDb;
+    private readonly CurrentBranchContext _currentBranchContext;
 
     private Customer? _selectedCustomer;
     private List<Customer> _customers = new();
@@ -24,15 +25,18 @@ public sealed partial class ServiceManagementPage : Page
     public ServiceManagementPage(
         CustomerService customerService,
         TenantDbContextFactory tenantDbFactory,
-        MasterErpDbContext masterDb)
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
         _customerService = customerService;
         _tenantDbFactory = tenantDbFactory;
         _masterDb = masterDb;
+        _currentBranchContext = currentBranchContext;
 
         Loaded += ServiceManagementPage_Loaded;
+        Unloaded += ServiceManagementPage_Unloaded;
     }
 
     private async Task<bool> HasBranchManagementAsync()
@@ -62,26 +66,30 @@ public sealed partial class ServiceManagementPage : Page
                 x.ModuleDefinitionId == 11);
     }
 
-    private async Task<int?> GetCurrentBranchIdAsync(
-        TenantDbContext db)
-    {
-        if (string.IsNullOrWhiteSpace(CurrentUser.UserId))
-            return null;
 
-        var employee =
-            await db.Employees
-                .AsNoTracking()
-                .FirstOrDefaultAsync(e =>
-                    e.MasterUserId == CurrentUser.UserId &&
-                    e.IsActive);
-
-        return employee?.BranchId;
-    }
-
-    private async void ServiceManagementPage_Loaded (
+    private async void ServiceManagementPage_Loaded(
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged += OnGlobalBranchChanged;
+
+        await LoadCustomersAsync();
+    }
+
+    private void ServiceManagementPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _currentBranchContext.BranchChanged -= OnGlobalBranchChanged;
+    }
+
+    private async void OnGlobalBranchChanged()
+    {
+        // The branch selector lives in MainWindow.
+        // When the user changes it, refresh this page.
+        if (!IsLoaded)
+            return;
+
         await LoadCustomersAsync();
     }
 
@@ -447,12 +455,12 @@ public sealed partial class ServiceManagementPage : Page
             if (branchManagementEnabled)
             {
                 currentBranchId =
-                    await GetCurrentBranchIdAsync(context);
+                    _currentBranchContext.BranchId;
 
                 if (currentBranchId == null)
                 {
                     ShowStatus(
-                        "The logged-in employee is not assigned to a branch.",
+                        "Please select a branch from the global branch selector.",
                         InfoBarSeverity.Warning);
 
                     return;
@@ -762,12 +770,12 @@ public sealed partial class ServiceManagementPage : Page
             if (branchManagementEnabled)
             {
                 var currentBranchId =
-                    await GetCurrentBranchIdAsync(db);
+                    _currentBranchContext.BranchId;
 
                 if (currentBranchId == null)
                 {
                     ShowStatus(
-                        "The logged-in employee is not assigned to a branch.",
+                        "Please select a branch from the global branch selector.",
                         InfoBarSeverity.Warning);
 
                     return;

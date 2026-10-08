@@ -1,3 +1,4 @@
+using ComputerRepairSystem.company.Context;
 using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.infrastructure.data;
@@ -12,26 +13,90 @@ namespace ComputerRepairSystem_winui.Pages;
 public sealed partial class PayrollManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly MasterErpDbContext _masterDb;
+    private readonly CurrentBranchContext _currentBranchContext;
 
     public PayrollManagementPage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb,
+        CurrentBranchContext currentBranchContext)
     {
         InitializeComponent();
 
         _tenantDbFactory = tenantDbFactory;
 
+        _masterDb = masterDb;
+
+        _currentBranchContext = currentBranchContext;
+
         Loaded += PayrollManagementPage_Loaded;
+        Unloaded += PayrollManagementPage_Unloaded;
     }
 
 
     // ==========================================
-    // PAGE LOADED
+    // BRANCH MANAGEMENT
+    // ==========================================
+
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
+    }
+
+
+    // ==========================================
+    // PAGE LOADED / UNLOADED
     // ==========================================
 
     private async void PayrollManagementPage_Loaded(
         object sender,
         RoutedEventArgs e)
     {
+        _currentBranchContext.BranchChanged +=
+            OnGlobalBranchChanged;
+
+        await LoadPayrollsAsync();
+    }
+
+
+    private void PayrollManagementPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _currentBranchContext.BranchChanged -=
+            OnGlobalBranchChanged;
+    }
+
+
+    private async void OnGlobalBranchChanged()
+    {
+        if (!IsLoaded)
+            return;
+
+        PayrollSearchBox.Text = string.Empty;
+
         await LoadPayrollsAsync();
     }
 
@@ -77,10 +142,48 @@ public sealed partial class PayrollManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var payrolls =
-                await db.Payrolls
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    PayrollList.ItemsSource = null;
+
+                    PayrollEmployeeCountText.Text = "0";
+                    PayrollBasicSalaryText.Text = "₱0.00";
+                    PayrollDeductionsText.Text = "₱0.00";
+                    PayrollNetSalaryText.Text = "₱0.00";
+
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+            var query =
+                db.Payrolls
                     .AsNoTracking()
                     .Include(x => x.Employee)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.Employee!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var payrolls =
+                await query
                     .OrderByDescending(x => x.PayPeriodEnd)
                     .ThenBy(x => x.Employee!.LastName)
                     .ToListAsync();
@@ -155,10 +258,38 @@ public sealed partial class PayrollManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var payrolls =
-                await db.Payrolls
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    PayrollList.ItemsSource = null;
+                    return;
+                }
+            }
+
+            var query =
+                db.Payrolls
                     .AsNoTracking()
                     .Include(x => x.Employee)
+                    .AsQueryable();
+
+            if (branchManagementEnabled)
+            {
+                query = query.Where(x =>
+                    x.Employee!.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var payrolls =
+                await query
                     .OrderByDescending(x => x.PayPeriodEnd)
                     .ThenBy(x => x.Employee!.LastName)
                     .ToListAsync();
@@ -251,10 +382,46 @@ public sealed partial class PayrollManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var employees =
-                await db.Employees
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+
+            // ==========================================
+            // EMPLOYEES (branch-filtered if enabled)
+            // ==========================================
+
+            var employeesQuery =
+                db.Employees
                     .AsNoTracking()
-                    .Where(x => x.IsActive)
+                    .Where(x => x.IsActive);
+
+            if (branchManagementEnabled)
+            {
+                employeesQuery =
+                    employeesQuery.Where(x =>
+                        x.BranchId ==
+                        currentBranchId!.Value);
+            }
+
+            var employees =
+                await employeesQuery
                     .OrderBy(x => x.LastName)
                     .ThenBy(x => x.FirstName)
                     .ToListAsync();
@@ -263,7 +430,9 @@ public sealed partial class PayrollManagementPage : Page
             {
                 await ShowMessageAsync(
                     "No Employees",
-                    "There are no active employees available for payroll.");
+                    branchManagementEnabled
+                        ? "There are no active employees in the selected branch."
+                        : "There are no active employees available for payroll.");
 
                 return;
             }
@@ -629,6 +798,17 @@ public sealed partial class PayrollManagementPage : Page
                 return;
             }
 
+            // Branch safety: employee must belong to selected branch
+            if (branchManagementEnabled &&
+                selectedEmployee.BranchId != currentBranchId)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "The selected employee does not belong to the currently selected branch.");
+
+                return;
+            }
+
 
             if (!startDatePicker.Date.HasValue ||
                 !endDatePicker.Date.HasValue)
@@ -782,6 +962,9 @@ public sealed partial class PayrollManagementPage : Page
                     ExpenseDate =
                         payroll.PayPeriodEnd,
 
+                    BranchId =
+                        selectedEmployee.BranchId,
+
                     Description =
                         $"Payroll for {selectedEmployee.FirstName} " +
                         $"{selectedEmployee.LastName} " +
@@ -835,6 +1018,27 @@ public sealed partial class PayrollManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+
             var payroll =
                 await db.Payrolls
                     .Include(x => x.Employee)
@@ -851,10 +1055,38 @@ public sealed partial class PayrollManagementPage : Page
             }
 
 
-            var employees =
-                await db.Employees
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                if (payroll.Employee == null ||
+                    payroll.Employee.BranchId != currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This payroll record belongs to an employee in a different branch.");
+
+                    return;
+                }
+            }
+
+
+            var employeesQuery =
+                db.Employees
                     .AsNoTracking()
-                    .Where(x => x.IsActive)
+                    .Where(x => x.IsActive);
+
+            if (branchManagementEnabled)
+            {
+                employeesQuery =
+                    employeesQuery.Where(x =>
+                        x.BranchId == currentBranchId!.Value);
+            }
+
+            var employees =
+                await employeesQuery
                     .OrderBy(x => x.LastName)
                     .ThenBy(x => x.FirstName)
                     .ToListAsync();
@@ -1005,6 +1237,25 @@ public sealed partial class PayrollManagementPage : Page
             }
 
 
+            // Branch safety: employee must belong to selected branch
+            if (branchManagementEnabled)
+            {
+                var selectedEmployee =
+                    employees.FirstOrDefault(x =>
+                        x.EmployeeId == employeeId);
+
+                if (selectedEmployee == null ||
+                    selectedEmployee.BranchId != currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "The selected employee does not belong to the currently selected branch.");
+
+                    return;
+                }
+            }
+
+
             if (!startDatePicker.Date.HasValue ||
                 !endDatePicker.Date.HasValue)
             {
@@ -1092,6 +1343,16 @@ public sealed partial class PayrollManagementPage : Page
             }
 
 
+            // ==========================================
+            // RELOAD EMPLOYEE (for description & branch)
+            // ==========================================
+
+            var employee =
+                await db.Employees
+                    .FirstOrDefaultAsync(x =>
+                        x.EmployeeId == employeeId);
+
+
             payroll.EmployeeId =
                 employeeId;
 
@@ -1128,9 +1389,12 @@ public sealed partial class PayrollManagementPage : Page
                 payrollExpense.ExpenseDate =
                     payroll.PayPeriodEnd;
 
+                payrollExpense.BranchId =
+                    employee?.BranchId;
+
                 payrollExpense.Description =
-                    $"Payroll for {payroll.Employee!.FirstName} " +
-                    $"{payroll.Employee.LastName} " +
+                    $"Payroll for {employee?.FirstName} " +
+                    $"{employee?.LastName} " +
                     $"({payroll.PayPeriodStart:MM/dd/yyyy} - " +
                     $"{payroll.PayPeriodEnd:MM/dd/yyyy})";
             }
@@ -1205,8 +1469,30 @@ public sealed partial class PayrollManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+
             var payroll =
                 await db.Payrolls
+                    .Include(x => x.Employee)
                     .FirstOrDefaultAsync(
                         x =>
                             x.PayrollId ==
@@ -1219,6 +1505,24 @@ public sealed partial class PayrollManagementPage : Page
                     "The payroll record could not be found.");
 
                 return;
+            }
+
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled)
+            {
+                if (payroll.Employee == null ||
+                    payroll.Employee.BranchId != currentBranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This payroll record belongs to an employee in a different branch.");
+
+                    return;
+                }
             }
 
 
