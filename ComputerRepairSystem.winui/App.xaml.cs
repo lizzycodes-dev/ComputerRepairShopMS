@@ -178,13 +178,13 @@ public partial class App : Application
         // INITIALIZE MASTER DATABASE
         // ==========================================
 
-        await InitializeMasterDbAsync();
+        // await InitializeMasterDbAsync();
 
         // ==========================================
         // INITIALIZE SYSTEM ACCOUNTS
         // ==========================================
 
-        await InitializeAdminAsync();
+        // await InitializeAdminAsync();
 
         /*
         // ==========================================
@@ -362,6 +362,6 @@ public partial class App : Application
         {
             throw new Exception("MasterErpDbContext is NULL.");
         }
-        await MasterDbSeeder.SeedAsync(db);
+        // await MasterDbSeeder.SeedAsync(db);
     }
 }

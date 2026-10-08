@@ -15,10 +15,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-
-        <!-- ====================================== -->
         <!-- HEADER -->
-        <!-- ====================================== -->
 
         <StackPanel
             Grid.Row="0"
@@ -35,26 +32,22 @@
 
         </StackPanel>
 
-
-        <!-- ====================================== -->
         <!-- TABS -->
-        <!-- ====================================== -->
 
         <TabView
             Grid.Row="1"
             x:Name="RepairTabView"
             IsAddTabButtonVisible="False">
 
-            <!-- ================================== -->
-            <!-- SERVICE REQUESTS TAB -->
-            <!-- ================================== -->
+            <!-- ================================= -->
+            <!-- SERVICE REQUESTS -->
+            <!-- ================================= -->
 
             <TabViewItem
                 Header="Service Requests"
                 IsClosable="False">
 
-                <Grid
-                    Padding="0,16,0,0">
+                <Grid Padding="0,16,0,0">
 
                     <Border
                         BorderThickness="1"
@@ -111,7 +104,6 @@
 
                             </ListView.Header>
 
-
                             <ListView.ItemTemplate>
 
                                 <DataTemplate>
@@ -127,34 +119,30 @@
                                             <ColumnDefinition Width="1.5*"/>
                                         </Grid.ColumnDefinitions>
 
-
                                         <TextBlock Grid.Column="0">
                                             <Run Text="{Binding Device.Customer.FirstName}"/>
+                                            <Run Text=" "/>
                                             <Run Text="{Binding Device.Customer.MiddleName, TargetNullValue=''}"/>
+                                            <Run Text=" "/>
                                             <Run Text="{Binding Device.Customer.LastName}"/>
                                         </TextBlock>
-
 
                                         <TextBlock
                                             Grid.Column="1"
                                             Text="{Binding Device.Model}"/>
-
 
                                         <TextBlock
                                             Grid.Column="2"
                                             Text="{Binding Description}"
                                             TextWrapping="Wrap"/>
 
-
                                         <TextBlock
                                             Grid.Column="3"
                                             Text="{Binding Priority}"/>
 
-
                                         <TextBlock
                                             Grid.Column="4"
                                             Text="{Binding Status}"/>
-
 
                                         <Button
                                             Grid.Column="5"
@@ -176,16 +164,15 @@
             </TabViewItem>
 
 
-            <!-- ================================== -->
-            <!-- REPAIRS TAB -->
-            <!-- ================================== -->
+            <!-- ================================= -->
+            <!-- ACTIVE REPAIRS -->
+            <!-- ================================= -->
 
             <TabViewItem
                 Header="Repairs"
-                   IsClosable="False">
+                IsClosable="False">
 
-                <Grid
-                    Padding="0,16,0,0">
+                <Grid Padding="0,16,0,0">
 
                     <Border
                         BorderThickness="1"
@@ -200,11 +187,12 @@
                                 <Grid Padding="8">
 
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2.2*"/>
                                         <ColumnDefinition Width="2.5*"/>
-                                        <ColumnDefinition Width="3*"/>
-                                        <ColumnDefinition Width="1*"/>
-                                        <ColumnDefinition Width="1.2*"/>
+                                        <ColumnDefinition Width="2*"/>
                                         <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                        <ColumnDefinition Width="1.3*"/>
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock
@@ -219,7 +207,133 @@
 
                                     <TextBlock
                                         Grid.Column="2"
+                                        Text="Technician"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Grid.Column="3"
                                         Text="Diagnosis"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Grid.Column="4"
+                                        Text="Status"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Grid.Column="5"
+                                        Text="Action"
+                                        FontWeight="SemiBold"/>
+
+                                </Grid>
+
+                            </ListView.Header>
+
+                            <ListView.ItemTemplate>
+
+                                <DataTemplate>
+
+                                    <Grid Padding="8">
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2.2*"/>
+                                            <ColumnDefinition Width="2.5*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="1.3*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0">
+                                            <Run Text="{Binding ServiceRequest.Device.Customer.FirstName}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding ServiceRequest.Device.Customer.LastName}"/>
+                                        </TextBlock>
+
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="{Binding ServiceRequest.Device.Model}"/>
+
+                                        <TextBlock Grid.Column="2">
+                                            <Run Text="{Binding Technician.FirstName}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding Technician.LastName}"/>
+                                        </TextBlock>
+
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            Text="{Binding Diagnosis}"
+                                            TextWrapping="Wrap"/>
+
+                                        <TextBlock
+                                            Grid.Column="4"
+                                            Text="{Binding Status}"/>
+
+                                        <Button
+                                            Grid.Column="5"
+                                            Content="Open"
+                                            Click="OpenRepairButton_Click"/>
+
+                                    </Grid>
+
+                                </DataTemplate>
+
+                            </ListView.ItemTemplate>
+
+                        </ListView>
+
+                    </Border>
+
+                </Grid>
+
+            </TabViewItem>
+
+
+            <!-- ================================= -->
+            <!-- REPAIR HISTORY -->
+            <!-- ================================= -->
+
+            <TabViewItem
+                Header="Repair History"
+                IsClosable="False">
+
+                <Grid Padding="0,16,0,0">
+
+                    <Border
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12">
+
+                        <ListView
+                            x:Name="RepairHistoryList">
+
+                            <ListView.Header>
+
+                                <Grid Padding="8">
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="2.2*"/>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="1.4*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Customer"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Text="Device"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Text="Technician"
                                         FontWeight="SemiBold"/>
 
                                     <TextBlock
@@ -229,13 +343,22 @@
 
                                     <TextBlock
                                         Grid.Column="4"
+                                        Text="Started"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Grid.Column="5"
+                                        Text="Completed"
+                                        FontWeight="SemiBold"/>
+
+                                    <TextBlock
+                                        Grid.Column="6"
                                         Text="Action"
                                         FontWeight="SemiBold"/>
 
                                 </Grid>
 
                             </ListView.Header>
-
 
                             <ListView.ItemTemplate>
 
@@ -244,40 +367,45 @@
                                     <Grid Padding="8">
 
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="2.5*"/>
-                                            <ColumnDefinition Width="3*"/>
-                                            <ColumnDefinition Width="1*"/>
-                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="2.2*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="1.4*"/>
                                             <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="1.2*"/>
                                         </Grid.ColumnDefinitions>
 
                                         <TextBlock Grid.Column="0">
                                             <Run Text="{Binding ServiceRequest.Device.Customer.FirstName}"/>
                                             <Run Text=" "/>
-                                            <Run Text="{Binding ServiceRequest.Device.Customer.MiddleName, TargetNullValue=?}"/>
-                                            <Run Text=" "/>
                                             <Run Text="{Binding ServiceRequest.Device.Customer.LastName}"/>
                                         </TextBlock>
-
 
                                         <TextBlock
                                             Grid.Column="1"
                                             Text="{Binding ServiceRequest.Device.Model}"/>
 
-
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Text="{Binding Diagnosis}"
-                                            TextWrapping="Wrap"/>
-
+                                        <TextBlock Grid.Column="2">
+                                            <Run Text="{Binding Technician.FirstName}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding Technician.LastName}"/>
+                                        </TextBlock>
 
                                         <TextBlock
                                             Grid.Column="3"
                                             Text="{Binding Status}"/>
 
+                                        <TextBlock
+                                            Grid.Column="4"
+                                            Text="{Binding StartDate}"/>
+
+                                        <TextBlock  
+                                            Grid.Column="5"
+                                            Text="{Binding EndDate}"/>
 
                                         <Button
-                                            Grid.Column="4"
+                                            Grid.Column="6"
                                             Content="Open"
                                             Click="OpenRepairButton_Click"/>
 

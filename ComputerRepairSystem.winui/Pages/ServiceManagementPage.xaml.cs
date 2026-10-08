@@ -1,6 +1,8 @@
-﻿using ComputerRepairSystem.infrastructure.data;
+﻿using ComputerRepairSystem.company.Data;
 using ComputerRepairSystem.company.Entities;
 using ComputerRepairSystem.company.Services;
+using ComputerRepairSystem.infrastructure.data;
+
 using ComputerRepairSystem_winui.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.UI.Xaml;
@@ -13,6 +15,7 @@ public sealed partial class ServiceManagementPage : Page
 {
     private readonly CustomerService _customerService;
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly MasterErpDbContext _masterDb;
 
     private Customer? _selectedCustomer;
     private List<Customer> _customers = new();
@@ -20,14 +23,59 @@ public sealed partial class ServiceManagementPage : Page
     private const int _pageSize = 5;
     public ServiceManagementPage(
         CustomerService customerService,
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb)
     {
         InitializeComponent();
 
         _customerService = customerService;
         _tenantDbFactory = tenantDbFactory;
+        _masterDb = masterDb;
 
         Loaded += ServiceManagementPage_Loaded;
+    }
+
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
+    }
+
+    private async Task<int?> GetCurrentBranchIdAsync(
+        TenantDbContext db)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentUser.UserId))
+            return null;
+
+        var employee =
+            await db.Employees
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e =>
+                    e.MasterUserId == CurrentUser.UserId &&
+                    e.IsActive);
+
+        return employee?.BranchId;
     }
 
     private async void ServiceManagementPage_Loaded (
@@ -391,6 +439,26 @@ public sealed partial class ServiceManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    await GetCurrentBranchIdAsync(context);
+
+                if (currentBranchId == null)
+                {
+                    ShowStatus(
+                        "The logged-in employee is not assigned to a branch.",
+                        InfoBarSeverity.Warning);
+
+                    return;
+                }
+            }
+
 
             var device = new Device
             {
@@ -425,6 +493,7 @@ public sealed partial class ServiceManagementPage : Page
             await context.SaveChangesAsync();
 
 
+
             // ==========================================
             // 3. CREATE SERVICE REQUEST
             // ==========================================
@@ -445,24 +514,15 @@ public sealed partial class ServiceManagementPage : Page
                 ?? "Pending";
 
 
-            var serviceRequest =
-                new ServiceRequest
-                {
-                    DeviceId =
-                        device.DeviceId,
-
-                    Description =
-                        DescriptionBox.Text.Trim(),
-
-                    Priority =
-                        priority,
-
-                    Status =
-                        status,
-
-                    RequestDate =
-                        DateTime.UtcNow
-                };
+            var serviceRequest = new ServiceRequest
+            {
+                DeviceId = device.DeviceId,
+                BranchId = currentBranchId,
+                Description = DescriptionBox.Text.Trim(),
+                Priority = priority,
+                Status = status,
+                RequestDate = DateTime.UtcNow
+            };
 
 
             context.ServiceRequests.Add(
@@ -690,11 +750,36 @@ public sealed partial class ServiceManagementPage : Page
                     .ToList();
 
 
-            var serviceRequests =
-                await db.ServiceRequests
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            var serviceRequestQuery =
+                db.ServiceRequests
                     .AsNoTracking()
                     .Where(r =>
-                        deviceIds.Contains(r.DeviceId))
+                        deviceIds.Contains(r.DeviceId));
+
+            if (branchManagementEnabled)
+            {
+                var currentBranchId =
+                    await GetCurrentBranchIdAsync(db);
+
+                if (currentBranchId == null)
+                {
+                    ShowStatus(
+                        "The logged-in employee is not assigned to a branch.",
+                        InfoBarSeverity.Warning);
+
+                    return;
+                }
+
+                serviceRequestQuery =
+                    serviceRequestQuery.Where(r =>
+                        r.BranchId == currentBranchId.Value);
+            }
+
+            var serviceRequests =
+                await serviceRequestQuery
                     .OrderByDescending(r =>
                         r.RequestDate)
                     .ToListAsync();

@@ -11,17 +11,46 @@ namespace ComputerRepairSystem_winui.Pages;
 public sealed partial class RepairManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly MasterErpDbContext _masterDb;
 
     public RepairManagementPage(
-        TenantDbContextFactory tenantDbFactory)
+        TenantDbContextFactory tenantDbFactory,
+        MasterErpDbContext masterDb)
     {
         InitializeComponent();
 
         _tenantDbFactory = tenantDbFactory;
+        _masterDb = masterDb;
 
         Loaded += RepairManagementPage_Loaded;
     }
 
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
+    }
 
     private async void RepairManagementPage_Loaded(
         object sender,
@@ -29,6 +58,23 @@ public sealed partial class RepairManagementPage : Page
     {
         await LoadServiceRequestsAsync();
         await LoadRepairsAsync();
+        await LoadRepairHistoryAsync();
+    }
+
+    private async Task<int?> GetCurrentBranchIdAsync(
+        TenantDbContext db)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentUser.UserId))
+            return null;
+
+        var employee =
+            await db.Employees
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e =>
+                    e.MasterUserId == CurrentUser.UserId &&
+                    e.IsActive);
+
+        return employee?.BranchId;
     }
 
 
@@ -38,6 +84,7 @@ public sealed partial class RepairManagementPage : Page
         {
             if (CurrentUser.CompanyId == null)
             {
+                ServiceRequestList.ItemsSource = null;
                 return;
             }
 
@@ -45,15 +92,41 @@ public sealed partial class RepairManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var requests =
-                await db.ServiceRequests
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            var query =
+                db.ServiceRequests
                     .AsNoTracking()
                     .Include(x => x.Device)
                         .ThenInclude(x => x.Customer)
                     .Where(x =>
                         x.Status != "In Repair" &&
                         x.Status != "Completed" &&
-                        x.Status != "Cancelled")
+                        x.Status != "Cancelled");
+
+            if (branchManagementEnabled)
+            {
+                var currentBranchId =
+                    await GetCurrentBranchIdAsync(db);
+
+                if (currentBranchId == null)
+                {
+                    ServiceRequestList.ItemsSource = null;
+
+                    await ShowMessageAsync(
+                        "Branch Not Assigned",
+                        "The logged-in employee is not assigned to a branch.");
+
+                    return;
+                }
+
+                query = query.Where(x =>
+                    x.BranchId == currentBranchId.Value);
+            }
+
+            var requests =
+                await query
                     .OrderByDescending(x => x.RequestDate)
                     .ToListAsync();
 
@@ -64,10 +137,8 @@ public sealed partial class RepairManagementPage : Page
         {
             ServiceRequestList.ItemsSource = null;
 
-            // We don't have a status bar on this page yet.
             System.Diagnostics.Debug.WriteLine(
-                "Failed to load service requests: "
-                + ex);
+                "Failed to load service requests: " + ex);
         }
     }
 
@@ -267,9 +338,22 @@ public sealed partial class RepairManagementPage : Page
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(CurrentUser.UserId))
+            {
+                await ShowMessageAsync(
+                    "User Not Found",
+                    "No logged-in user was found.");
+
+                return;
+            }
+
             await using var db =
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
+
+            // ==========================================
+            // CHECK IF REPAIR ALREADY EXISTS
+            // ==========================================
 
             var existingRepair =
                 await db.Repairs
@@ -287,7 +371,10 @@ public sealed partial class RepairManagementPage : Page
                 return;
             }
 
-            // Get the actual ServiceRequest tracked by this DbContext
+            // ==========================================
+            // GET THE ACTUAL SERVICE REQUEST
+            // ==========================================
+
             var serviceRequest =
                 await db.ServiceRequests
                     .FirstOrDefaultAsync(
@@ -304,6 +391,78 @@ public sealed partial class RepairManagementPage : Page
                 return;
             }
 
+            // ==========================================
+            // GET THE LOGGED-IN EMPLOYEE
+            // ==========================================
+
+            var masterUserId = CurrentUser.UserId;
+
+            var technician =
+                await db.Employees
+                    .FirstOrDefaultAsync(
+                        x =>
+                            x.MasterUserId == masterUserId &&
+                            x.IsActive);
+
+            if (technician == null)
+            {
+                await ShowMessageAsync(
+                    "Employee Not Found",
+                    $"The logged-in user is not linked to an active employee record.\n\n" +
+                    $"Master User ID: {masterUserId}");
+
+                return;
+            }
+
+            // ==========================================
+            // CHECK BRANCH MANAGEMENT
+            // ==========================================
+
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            if (branchManagementEnabled)
+            {
+                // ======================================
+                // CHECK EMPLOYEE BRANCH
+                // ======================================
+
+                if (technician.BranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Assigned",
+                        "The logged-in employee is not assigned to a branch.");
+
+                    return;
+                }
+
+                // ======================================
+                // CHECK SERVICE REQUEST BRANCH
+                // ======================================
+
+                if (serviceRequest.BranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Assigned",
+                        "This service request is not assigned to a branch.");
+
+                    return;
+                }
+
+                if (serviceRequest.BranchId != technician.BranchId)
+                {
+                    await ShowMessageAsync(
+                        "Access Denied",
+                        "This service request belongs to a different branch.");
+
+                    return;
+                }
+            }
+
+            // ==========================================
+            // CREATE REPAIR
+            // ==========================================
+
             var repair = new Repair
             {
                 ServiceRequestId =
@@ -318,26 +477,38 @@ public sealed partial class RepairManagementPage : Page
                 Status =
                     "Pending",
 
-                StartDate = null,
-                EndDate = null,
+                StartDate =
+                    null,
 
-                TechnicianId = null,
-             
+                EndDate =
+                    null,
+
+                TechnicianId =
+                    technician.EmployeeId
             };
 
             db.Repairs.Add(repair);
 
-            // Update the tracked ServiceRequest
-            serviceRequest.Status = "In Repair";
+            // ==========================================
+            // UPDATE SERVICE REQUEST
+            // ==========================================
+
+            serviceRequest.Status =
+                "In Repair";
 
             await db.SaveChangesAsync();
 
+            // ==========================================
+            // REFRESH LISTS
+            // ==========================================
+
             await LoadServiceRequestsAsync();
             await LoadRepairsAsync();
+            await LoadRepairHistoryAsync();
 
             await ShowMessageAsync(
                 "Repair Created",
-                "The repair was created successfully.");
+                $"The repair was created successfully and assigned to employee #{technician.EmployeeId}.");
         }
         catch (Exception ex)
         {
@@ -366,6 +537,7 @@ public sealed partial class RepairManagementPage : Page
         {
             if (CurrentUser.CompanyId == null)
             {
+                RepairList.ItemsSource = null;
                 return;
             }
 
@@ -373,21 +545,46 @@ public sealed partial class RepairManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var repairs =
-                await db.Repairs
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            var query =
+                db.Repairs
                     .AsNoTracking()
                     .Include(r => r.ServiceRequest)
                         .ThenInclude(sr => sr.Device)
                             .ThenInclude(d => d.Customer)
-                    .Where(r => r.Status != "Completed")
-                    .OrderByDescending(
-                        r => r.RepairId)
+                    .Include(r => r.Technician)
+                    .Where(r =>
+                        r.Status != "Completed");
+
+            if (branchManagementEnabled)
+            {
+                var currentBranchId =
+                    await GetCurrentBranchIdAsync(db);
+
+                if (currentBranchId == null)
+                {
+                    RepairList.ItemsSource = null;
+                    return;
+                }
+
+                query = query.Where(r =>
+                    r.ServiceRequest.BranchId ==
+                    currentBranchId.Value);
+            }
+
+            var repairs =
+                await query
+                    .OrderByDescending(r => r.RepairId)
                     .ToListAsync();
 
             RepairList.ItemsSource = repairs;
 
             System.Diagnostics.Debug.WriteLine(
-                $"Loaded {repairs.Count} repair(s).");
+                branchManagementEnabled
+                    ? $"Loaded {repairs.Count} repair(s) with branch filtering."
+                    : $"Loaded {repairs.Count} repair(s) without branch filtering.");
         }
         catch (Exception ex)
         {
@@ -395,6 +592,69 @@ public sealed partial class RepairManagementPage : Page
 
             System.Diagnostics.Debug.WriteLine(
                 "Failed to load repairs: " + ex);
+        }
+    }
+    private async Task LoadRepairHistoryAsync()
+    {
+        try
+        {
+            if (CurrentUser.CompanyId == null)
+            {
+                RepairHistoryList.ItemsSource = null;
+                return;
+            }
+
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
+
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            var query =
+                db.Repairs
+                    .AsNoTracking()
+                    .Include(r => r.ServiceRequest)
+                        .ThenInclude(sr => sr.Device)
+                            .ThenInclude(d => d.Customer)
+                    .Include(r => r.Technician)
+                    .Where(r =>
+                        r.Status == "Completed");
+
+            if (branchManagementEnabled)
+            {
+                var currentBranchId =
+                    await GetCurrentBranchIdAsync(db);
+
+                if (currentBranchId == null)
+                {
+                    RepairHistoryList.ItemsSource = null;
+                    return;
+                }
+
+                query = query.Where(r =>
+                    r.ServiceRequest.BranchId ==
+                    currentBranchId.Value);
+            }
+
+            var history =
+                await query
+                    .OrderByDescending(r => r.EndDate)
+                    .ToListAsync();
+
+            RepairHistoryList.ItemsSource = history;
+
+            System.Diagnostics.Debug.WriteLine(
+                branchManagementEnabled
+                    ? $"Loaded {history.Count} completed repair(s) with branch filtering."
+                    : $"Loaded {history.Count} completed repair(s) without branch filtering.");
+        }
+        catch (Exception ex)
+        {
+            RepairHistoryList.ItemsSource = null;
+
+            System.Diagnostics.Debug.WriteLine(
+                "Failed to load repair history: " + ex);
         }
     }
 
@@ -412,24 +672,83 @@ public sealed partial class RepairManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            var repair =
-                await db.Repairs
+            // ==========================================
+            // GET CURRENT EMPLOYEE
+            // ==========================================
+
+            var technician =
+                await db.Employees
+                    .FirstOrDefaultAsync(
+                        x =>
+                            x.MasterUserId ==
+                            CurrentUser.UserId &&
+                            x.IsActive);
+
+            if (technician == null)
+            {
+                await ShowMessageAsync(
+                    "Employee Not Found",
+                    "The logged-in user is not linked to an active employee record.");
+
+                return;
+            }
+
+            // ==========================================
+            // CHECK BRANCH MANAGEMENT
+            // ==========================================
+
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                if (technician.BranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Assigned",
+                        "The logged-in employee is not assigned to a branch.");
+
+                    return;
+                }
+
+                currentBranchId =
+                    technician.BranchId.Value;
+            }
+
+            // ==========================================
+            // GET REPAIR
+            // ==========================================
+
+            var repairQuery =
+                db.Repairs
                     .Include(r => r.ServiceRequest)
                         .ThenInclude(sr => sr.Device)
                             .ThenInclude(d => d.Customer)
                     .Include(r => r.RepairItems)
                         .ThenInclude(ri => ri.Item)
-                    .FirstOrDefaultAsync(
-                        r => r.RepairId == repairId);
+                    .Where(r =>
+                        r.RepairId == repairId);
+
+            if (branchManagementEnabled)
+            {
+                repairQuery = repairQuery.Where(r =>
+                    r.ServiceRequest.BranchId ==
+                    currentBranchId!.Value);
+            }
+
+            var repair =
+                await repairQuery.FirstOrDefaultAsync();
 
             if (repair == null)
             {
-                System.Diagnostics.Debug.WriteLine(
-                    "Repair not found.");
+                await ShowMessageAsync(
+                    "Repair Not Found",
+                    "The repair could not be found.");
 
                 return;
             }
-
 
             // ==========================================
             // REPAIR FIELDS
@@ -445,7 +764,6 @@ public sealed partial class RepairManagementPage : Page
                     MinHeight = 100
                 };
 
-
             var repairDescriptionBox =
                 new TextBox
                 {
@@ -457,7 +775,6 @@ public sealed partial class RepairManagementPage : Page
                     TextWrapping = TextWrapping.Wrap,
                     MinHeight = 100
                 };
-
 
             // ==========================================
             // STATUS
@@ -509,7 +826,6 @@ public sealed partial class RepairManagementPage : Page
                 statusBox.SelectedIndex = 0;
             }
 
-
             // ==========================================
             // DATES
             // ==========================================
@@ -526,7 +842,6 @@ public sealed partial class RepairManagementPage : Page
                             : null
                 };
 
-
             var endDatePicker =
                 new CalendarDatePicker
                 {
@@ -539,7 +854,6 @@ public sealed partial class RepairManagementPage : Page
                             : null
                 };
 
-
             // ==========================================
             // REPAIR ITEMS TABLE
             // ==========================================
@@ -549,7 +863,6 @@ public sealed partial class RepairManagementPage : Page
                 {
                     Height = 220
                 };
-
 
             var repairItemsHeader =
                 new Grid
@@ -634,7 +947,6 @@ public sealed partial class RepairManagementPage : Page
             repairItemsHeader.Children.Add(headerQty);
             repairItemsHeader.Children.Add(headerPrice);
             repairItemsHeader.Children.Add(headerDiscount);
-
 
             // ==========================================
             // FUNCTION TO ADD A ROW
@@ -728,7 +1040,6 @@ public sealed partial class RepairManagementPage : Page
                 repairItemsList.Items.Add(row);
             }
 
-
             // ==========================================
             // LOAD EXISTING ITEMS
             // ==========================================
@@ -737,7 +1048,6 @@ public sealed partial class RepairManagementPage : Page
             {
                 AddRepairItemRow(item);
             }
-
 
             // ==========================================
             // ADD ITEM AREA
@@ -750,14 +1060,12 @@ public sealed partial class RepairManagementPage : Page
                     Visibility = Visibility.Collapsed
                 };
 
-
             var inventoryComboBox =
                 new ComboBox
                 {
                     Header = "Inventory Item",
                     Width = 300
                 };
-
 
             var quantityBox =
                 new NumberBox
@@ -769,7 +1077,6 @@ public sealed partial class RepairManagementPage : Page
                     Width = 300
                 };
 
-
             var discountBox =
                 new NumberBox
                 {
@@ -780,13 +1087,11 @@ public sealed partial class RepairManagementPage : Page
                     Width = 300
                 };
 
-
             var availableStockText =
                 new TextBlock
                 {
                     Opacity = 0.7
                 };
-
 
             var addItemMessage =
                 new TextBlock
@@ -795,21 +1100,29 @@ public sealed partial class RepairManagementPage : Page
                     TextWrapping = TextWrapping.Wrap
                 };
 
-
             // ==========================================
             // LOAD AVAILABLE INVENTORY
+            // ONLY CURRENT BRANCH
             // ==========================================
 
-            var inventory =
-                await db.Inventories
+            var inventoryQuery =
+                db.Inventories
                     .Include(i => i.Item)
                     .Where(i =>
                         i.QuantityOnHand > 0 &&
                         i.Item != null &&
-                        i.Item.IsActive)
+                        i.Item.IsActive);
+
+            if (branchManagementEnabled)
+            {
+                inventoryQuery = inventoryQuery.Where(i =>
+                    i.BranchId == currentBranchId!.Value);
+            }
+
+            var inventory =
+                await inventoryQuery
                     .OrderBy(i => i.Item!.ItemName)
                     .ToListAsync();
-
 
             foreach (var inventoryRecord
                 in inventory)
@@ -829,12 +1142,10 @@ public sealed partial class RepairManagementPage : Page
                     comboItem);
             }
 
-
             if (inventoryComboBox.Items.Count > 0)
             {
                 inventoryComboBox.SelectedIndex = 0;
             }
-
 
             // ==========================================
             // SHOW AVAILABLE STOCK
@@ -857,7 +1168,6 @@ public sealed partial class RepairManagementPage : Page
                 }
             }
 
-
             inventoryComboBox.SelectionChanged +=
                 (_, _) =>
                 {
@@ -865,9 +1175,7 @@ public sealed partial class RepairManagementPage : Page
                     addItemMessage.Text = string.Empty;
                 };
 
-
             UpdateAvailableStock();
-
 
             // ==========================================
             // CONFIRM ADD ITEM
@@ -879,13 +1187,11 @@ public sealed partial class RepairManagementPage : Page
                     Content = "Add Item"
                 };
 
-
             confirmAddItemButton.Click +=
                 async (_, _) =>
                 {
                     addItemMessage.Text =
                         string.Empty;
-
 
                     if (inventoryComboBox.SelectedItem
                         is not ComboBoxItem comboItem ||
@@ -897,6 +1203,15 @@ public sealed partial class RepairManagementPage : Page
                         return;
                     }
 
+                    // Extra branch safety check
+                    if (branchManagementEnabled &&
+                        selectedInventory.BranchId != currentBranchId)
+                    {
+                        addItemMessage.Text =
+                            "This inventory item does not belong to your branch.";
+
+                        return;
+                    }
 
                     if (double.IsNaN(
                             quantityBox.Value) ||
@@ -908,7 +1223,6 @@ public sealed partial class RepairManagementPage : Page
                         return;
                     }
 
-
                     if (double.IsNaN(
                             discountBox.Value) ||
                         discountBox.Value < 0)
@@ -919,13 +1233,11 @@ public sealed partial class RepairManagementPage : Page
                         return;
                     }
 
-
                     var quantity =
                         (decimal)quantityBox.Value;
 
                     var discount =
                         (decimal)discountBox.Value;
-
 
                     if (quantity >
                         selectedInventory.QuantityOnHand)
@@ -937,7 +1249,6 @@ public sealed partial class RepairManagementPage : Page
 
                         return;
                     }
-
 
                     // ==================================
                     // CREATE REPAIR ITEM
@@ -962,10 +1273,8 @@ public sealed partial class RepairManagementPage : Page
                                 discount
                         };
 
-
                     db.RepairItems.Add(
                         repairItem);
-
 
                     // ==================================
                     // REDUCE STOCK
@@ -974,9 +1283,7 @@ public sealed partial class RepairManagementPage : Page
                     selectedInventory.QuantityOnHand -=
                         quantity;
 
-
                     await db.SaveChangesAsync();
-
 
                     // ==================================
                     // UPDATE UI
@@ -985,25 +1292,26 @@ public sealed partial class RepairManagementPage : Page
                     repairItem.Item =
                         selectedInventory.Item;
 
-
                     AddRepairItemRow(
                         repairItem);
 
-
                     inventoryComboBox.Items.Clear();
 
+                    // ==================================
+                    // RELOAD CURRENT BRANCH INVENTORY
+                    // ==================================
 
                     var updatedInventory =
                         await db.Inventories
                             .Include(i => i.Item)
                             .Where(i =>
+                                i.BranchId == currentBranchId &&
                                 i.QuantityOnHand > 0 &&
                                 i.Item != null &&
                                 i.Item.IsActive)
                             .OrderBy(
                                 i => i.Item!.ItemName)
                             .ToListAsync();
-
 
                     foreach (var inventoryRecord
                         in updatedInventory)
@@ -1023,13 +1331,11 @@ public sealed partial class RepairManagementPage : Page
                             newComboItem);
                     }
 
-
                     if (inventoryComboBox.Items.Count > 0)
                     {
                         inventoryComboBox.SelectedIndex =
                             0;
                     }
-
 
                     quantityBox.Value = 1;
                     discountBox.Value = 0;
@@ -1038,7 +1344,6 @@ public sealed partial class RepairManagementPage : Page
                         $"{selectedInventory.Item!.ItemName} " +
                         $"was added successfully.";
                 };
-
 
             // ==========================================
             // CANCEL ADD ITEM
@@ -1050,7 +1355,6 @@ public sealed partial class RepairManagementPage : Page
                     Content = "Cancel"
                 };
 
-
             cancelAddItemButton.Click +=
                 (_, _) =>
                 {
@@ -1060,7 +1364,6 @@ public sealed partial class RepairManagementPage : Page
                     addItemMessage.Text =
                         string.Empty;
                 };
-
 
             // ==========================================
             // ADD ITEM PANEL CONTENT
@@ -1096,7 +1399,6 @@ public sealed partial class RepairManagementPage : Page
             addItemPanel.Children.Add(
                 addItemMessage);
 
-
             // ==========================================
             // ADD ITEM BUTTON
             // ==========================================
@@ -1106,7 +1408,6 @@ public sealed partial class RepairManagementPage : Page
                 {
                     Content = "Add Item"
                 };
-
 
             addItemButton.Click +=
                 (_, _) =>
@@ -1129,7 +1430,6 @@ public sealed partial class RepairManagementPage : Page
                             : Visibility.Visible;
                 };
 
-
             // ==========================================
             // REPAIR ITEMS PANEL
             // ==========================================
@@ -1139,7 +1439,6 @@ public sealed partial class RepairManagementPage : Page
                 {
                     Spacing = 4
                 };
-
 
             repairItemsPanel.Children.Add(
                 repairItemsHeader);
@@ -1153,7 +1452,6 @@ public sealed partial class RepairManagementPage : Page
             repairItemsPanel.Children.Add(
                 addItemPanel);
 
-
             // ==========================================
             // MAIN CONTENT
             // ==========================================
@@ -1163,7 +1461,6 @@ public sealed partial class RepairManagementPage : Page
                 {
                     Spacing = 12
                 };
-
 
             contentPanel.Children.Add(
                 new TextBlock
@@ -1177,7 +1474,6 @@ public sealed partial class RepairManagementPage : Page
                         Microsoft.UI.Text.FontWeights.SemiBold
                 });
 
-
             contentPanel.Children.Add(
                 new TextBlock
                 {
@@ -1185,7 +1481,6 @@ public sealed partial class RepairManagementPage : Page
                         $"Service Request: " +
                         $"{repair.ServiceRequestId}"
                 });
-
 
             contentPanel.Children.Add(
                 new TextBlock
@@ -1196,7 +1491,6 @@ public sealed partial class RepairManagementPage : Page
                         $"{repair.ServiceRequest.Device.Customer.LastName}"
                 });
 
-
             contentPanel.Children.Add(
                 new TextBlock
                 {
@@ -1205,7 +1499,6 @@ public sealed partial class RepairManagementPage : Page
                         $"{repair.ServiceRequest.Device.Brand} " +
                         $"{repair.ServiceRequest.Device.Model}"
                 });
-
 
             contentPanel.Children.Add(
                 diagnosisBox);
@@ -1221,7 +1514,6 @@ public sealed partial class RepairManagementPage : Page
 
             contentPanel.Children.Add(
                 endDatePicker);
-
 
             contentPanel.Children.Add(
                 new TextBlock
@@ -1241,10 +1533,8 @@ public sealed partial class RepairManagementPage : Page
                             0)
                 });
 
-
             contentPanel.Children.Add(
                 repairItemsPanel);
-
 
             // ==========================================
             // SCROLL VIEWER
@@ -1264,7 +1554,6 @@ public sealed partial class RepairManagementPage : Page
                     HorizontalScrollBarVisibility =
                         ScrollBarVisibility.Disabled
                 };
-
 
             // ==========================================
             // DIALOG
@@ -1298,6 +1587,10 @@ public sealed partial class RepairManagementPage : Page
             var result =
                 await dialog.ShowAsync();
 
+            // ==========================================
+            // COMPLETE REPAIR
+            // ==========================================
+
             if (result == ContentDialogResult.Secondary)
             {
                 repair.Diagnosis =
@@ -1319,9 +1612,18 @@ public sealed partial class RepairManagementPage : Page
                     endDatePicker.Date?.DateTime
                     ?? DateTime.UtcNow;
 
+                // ==========================================
+                // COMPLETE SERVICE REQUEST
+                // ==========================================
+
+                repair.ServiceRequest.Status =
+                    "Completed";
+
                 await db.SaveChangesAsync();
 
+                await LoadServiceRequestsAsync();
                 await LoadRepairsAsync();
+                await LoadRepairHistoryAsync();
 
                 await ShowMessageAsync(
                     "Repair Completed",
@@ -1330,11 +1632,14 @@ public sealed partial class RepairManagementPage : Page
                 return;
             }
 
+            // ==========================================
+            // CLOSE DIALOG
+            // ==========================================
+
             if (result != ContentDialogResult.Primary)
             {
                 return;
             }
-
 
             // ==========================================
             // SAVE REPAIR
@@ -1368,47 +1673,7 @@ public sealed partial class RepairManagementPage : Page
             await db.SaveChangesAsync();
 
             await LoadRepairsAsync();
-
-
-            // ==========================================
-            // SAVE REPAIR
-            // ==========================================
-
-            repair.Diagnosis =
-                string.IsNullOrWhiteSpace(
-                    diagnosisBox.Text)
-                    ? null
-                    : diagnosisBox.Text.Trim();
-
-
-            repair.RepairDescription =
-                string.IsNullOrWhiteSpace(
-                    repairDescriptionBox.Text)
-                    ? null
-                    : repairDescriptionBox.Text.Trim();
-
-
-            repair.Status =
-                (statusBox.SelectedItem
-                    as ComboBoxItem)?
-                    .Content?
-                    .ToString()
-                ?? "Pending";
-
-
-            repair.StartDate =
-                startDatePicker.Date?.DateTime;
-
-
-            repair.EndDate =
-                endDatePicker.Date?.DateTime;
-
-
-            await db.SaveChangesAsync();
-
-
-            await LoadRepairsAsync();
-
+            await LoadRepairHistoryAsync();
 
             System.Diagnostics.Debug.WriteLine(
                 "Repair updated successfully.");
@@ -1419,6 +1684,7 @@ public sealed partial class RepairManagementPage : Page
                 "Unable to open repair: " + ex);
         }
     }
+
     private async Task AddRepairItemAsync(
         int repairId,
         ListView repairItemsList)

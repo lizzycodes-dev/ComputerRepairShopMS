@@ -4,7 +4,7 @@ using ComputerRepairSystem.company.Repositories;
 using ComputerRepairSystem.company.Services;
 using ComputerRepairSystem.infrastructure.Entities;
 using ComputerRepairSystem.domain.Entities;
-
+using ComputerRepairSystem.api.Services;
 using ComputerRepairSystem.infrastructure.data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +48,9 @@ builder.Services.AddScoped<
     ITenantDbContextFactory,
     TenantDbContextFactory>();
 
+builder.Services.AddScoped<
+    ICompanyContext,
+    CompanyContext>();
 // ==========================================
 // REPOSITORIES
 // ==========================================

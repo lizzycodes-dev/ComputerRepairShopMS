@@ -39,6 +39,7 @@ public sealed partial class EmployeeManagementPage : Page
     {
         public Employee Employee { get; set; } = null!;
 
+        public GridLength BranchColumnWidth { get; set; }
         public string FullName =>
             string.Join(
                 " ",
@@ -83,12 +84,27 @@ public sealed partial class EmployeeManagementPage : Page
                 .GetAccessibleModuleCodesAsync();
 
         _hasBranchModule =
-            modules.Contains("BRANCH");
+            modules.Contains(
+                "BRANCH",
+                StringComparer.OrdinalIgnoreCase);
+
+        ApplyBranchColumnVisibility();
 
         await LoadEmployeesAsync();
     }
 
+    private void ApplyBranchColumnVisibility()
+    {
+        BranchHeaderColumn.Width =
+            _hasBranchModule
+                ? new GridLength(1.2, GridUnitType.Star)
+                : new GridLength(0);
 
+        BranchHeaderText.Visibility =
+            _hasBranchModule
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
     // ==========================================
     // LOAD EMPLOYEES
     // ==========================================
@@ -120,7 +136,12 @@ public sealed partial class EmployeeManagementPage : Page
                 employees
                     .Select(x => new EmployeeRow
                     {
-                        Employee = x
+                        Employee = x,
+
+                        BranchColumnWidth =
+                            _hasBranchModule
+                                ? new GridLength(1.2, GridUnitType.Star)
+                                : new GridLength(0)
                     })
                     .ToList();
 

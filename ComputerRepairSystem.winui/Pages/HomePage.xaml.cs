@@ -19,6 +19,9 @@ public sealed partial class HomePage : Page
 
     private readonly MasterErpDbContext
         _masterDb;
+
+    private int? _selectedDashboardBranchId;
+    private bool _branchManagementEnabled;
     public HomePage(
         TenantDbContextFactory tenantDbFactory,
         MasterErpDbContext masterDb)
@@ -33,6 +36,110 @@ public sealed partial class HomePage : Page
 
         Loaded += HomePage_Loaded;
     }
+
+    private async Task<bool> HasBranchManagementAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return false;
+
+        var subscription =
+            await _masterDb.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.CompanyId == CurrentUser.CompanyId.Value &&
+                    s.Status == "Active" &&
+                    (!s.EndDate.HasValue ||
+                     s.EndDate.Value > DateTime.UtcNow))
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+        if (subscription == null)
+            return false;
+
+        return await _masterDb.SubscriptionPlanModules
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.SubscriptionPlanId ==
+                    subscription.SubscriptionPlanId &&
+                x.ModuleDefinitionId == 11);
+    }
+
+    private async Task LoadDashboardBranchesAsync(
+        TenantDbContext db)
+    {
+        _branchManagementEnabled =
+            await HasBranchManagementAsync();
+
+        if (!_branchManagementEnabled)
+        {
+            BranchSelectorPanel.Visibility =
+                Visibility.Collapsed;
+
+            _selectedDashboardBranchId = null;
+
+            return;
+        }
+
+        var employee =
+            await db.Employees
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e =>
+                    e.MasterUserId == CurrentUser.UserId &&
+                    e.IsActive);
+
+        if (employee == null)
+        {
+            BranchSelectorPanel.Visibility =
+                Visibility.Collapsed;
+
+            _selectedDashboardBranchId = null;
+
+            return;
+        }
+
+        var branches =
+            await db.Branches
+                .AsNoTracking()
+                .Where(b => b.IsActive)
+                .OrderBy(b => b.BranchName)
+                .ToListAsync();
+
+
+
+        BranchSelectorPanel.Visibility =
+            branches.Count > 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        DashboardBranchComboBox.ItemsSource =
+            branches;
+
+        DashboardBranchComboBox.DisplayMemberPath =
+            "BranchName";
+
+        /*
+         * Default to the employee's assigned branch.
+         */
+        if (employee.BranchId.HasValue)
+        {
+            _selectedDashboardBranchId =
+                employee.BranchId.Value;
+
+            DashboardBranchComboBox.SelectedValue =
+                employee.BranchId.Value;
+        }
+        else if (branches.Count > 0)
+        {
+            /*
+             * Company-level Admin with no BranchId.
+             * Default to the first branch.
+             */
+            _selectedDashboardBranchId =
+                branches[0].BranchId;
+
+            DashboardBranchComboBox.SelectedIndex = 0;
+        }
+    }
     private async Task LoadProfitVsExpensesAsync(TenantDbContext db)
     {
         var startOfMonth =
@@ -45,23 +152,52 @@ public sealed partial class HomePage : Page
             startOfMonth.AddMonths(1);
 
         // Completed sales
-        var revenue =
-            await db.Payments
+        var revenueQuery =
+            db.Payments
                 .AsNoTracking()
                 .Where(p =>
                     p.Status == "Completed" &&
                     p.PaymentDate >= startOfMonth &&
-                    p.PaymentDate < startOfNextMonth)
+                    p.PaymentDate < startOfNextMonth);
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            revenueQuery =
+                revenueQuery.Where(p =>
+                    p.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                    branchId);
+        }
+
+        var revenue =
+            await revenueQuery
                 .Select(p => (decimal?)p.Amount)
                 .SumAsync() ?? 0;
 
         // Expenses
-        var expenses =
-            await db.Expenses
+        var expensesQuery =
+            db.Expenses
                 .AsNoTracking()
                 .Where(e =>
                     e.ExpenseDate >= startOfMonth &&
-                    e.ExpenseDate < startOfNextMonth)
+                    e.ExpenseDate < startOfNextMonth);
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            expensesQuery =
+                expensesQuery.Where(e =>
+                    e.BranchId == branchId);
+        }
+
+        var expenses =
+            await expensesQuery
                 .Select(e => (decimal?)e.Amount)
                 .SumAsync() ?? 0;
 
@@ -161,6 +297,169 @@ public sealed partial class HomePage : Page
         mainWindow.NavigateToTermsAndConditionsPage();
     }
 
+    private async void DashboardBranchComboBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        if (!_branchManagementEnabled)
+            return;
+
+        if (DashboardBranchComboBox.SelectedItem
+            is not Branch selectedBranch)
+        {
+            return;
+        }
+
+        _selectedDashboardBranchId =
+            selectedBranch.BranchId;
+
+        await LoadDashboardDataForSelectedBranchAsync();
+    }
+
+    private async Task LoadDashboardDataForSelectedBranchAsync()
+    {
+        if (CurrentUser.CompanyId == null)
+            return;
+
+        try
+        {
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
+
+            // KPI
+            var totalRepairsQuery =
+                db.Repairs
+                    .AsNoTracking()
+                    .AsQueryable();
+
+            var pendingRepairsQuery =
+                db.Repairs
+                    .AsNoTracking()
+                    .Where(r =>
+                        r.Status == "Pending");
+
+            var completedRepairsQuery =
+                db.Repairs
+                    .AsNoTracking()
+                    .Where(r =>
+                        r.Status == "Completed");
+
+            var inProgressRepairsQuery =
+                db.Repairs
+                    .AsNoTracking()
+                    .Where(r =>
+                        r.Status == "Diagnosing" ||
+                        r.Status == "In Repair" ||
+                        r.Status == "Ready for Pickup");
+
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                var branchId =
+                    _selectedDashboardBranchId.Value;
+
+                totalRepairsQuery =
+                    totalRepairsQuery.Where(r =>
+                        r.ServiceRequest.BranchId ==
+                        branchId);
+
+                pendingRepairsQuery =
+                    pendingRepairsQuery.Where(r =>
+                        r.ServiceRequest.BranchId ==
+                        branchId);
+
+                completedRepairsQuery =
+                    completedRepairsQuery.Where(r =>
+                        r.ServiceRequest.BranchId ==
+                        branchId);
+
+                inProgressRepairsQuery =
+                    inProgressRepairsQuery.Where(r =>
+                        r.ServiceRequest.BranchId ==
+                        branchId);
+            }
+
+            var totalRepairs =
+                await totalRepairsQuery.CountAsync();
+
+            var pendingRepairs =
+                await pendingRepairsQuery.CountAsync();
+
+            var completedRepairs =
+                await completedRepairsQuery.CountAsync();
+
+            var inProgressRepairs =
+                await inProgressRepairsQuery.CountAsync();
+
+            // REVENUE
+
+            var revenueQuery =
+                db.Payments
+                    .AsNoTracking()
+                    .Where(p =>
+                        p.Status == "Completed");
+
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                var branchId =
+                    _selectedDashboardBranchId.Value;
+
+                revenueQuery =
+                    revenueQuery.Where(p =>
+                        p.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                        branchId);
+            }
+
+            var totalRevenue =
+                await revenueQuery
+                    .Select(p => (decimal?)p.Amount)
+                    .SumAsync()
+                ?? 0;
+
+            // UPDATE UI
+
+            TotalRepairsCountText.Text =
+                totalRepairs.ToString();
+
+            PendingRepairsCountText.Text =
+                pendingRepairs.ToString();
+
+            CompletedRepairsCountText.Text =
+                completedRepairs.ToString();
+
+            TotalRevenueText.Text =
+                $"₱{totalRevenue:N2}";
+
+            // Other dashboard sections
+
+            await LoadRepairOverviewAsync(db);
+            await LoadProfitVsExpensesAsync(db);
+            await LoadSalesTrendsAsync(db);
+            await LoadRecentRepairsAsync(db);
+            await LoadRecentTransactionsAsync(db);
+            await LoadLowStockAsync(db);
+            await LoadOutstandingPaymentsAsync(db);
+            await LoadTodayAttendanceAsync(db);
+
+            UpdateRepairStatus(
+                pendingRepairs,
+                inProgressRepairs,
+                completedRepairs,
+                totalRepairs);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "Failed to load selected branch dashboard: " +
+                ex);
+        }
+    }
+
     // ==========================================
     // LOAD DASHBOARD
     // ==========================================
@@ -183,7 +482,7 @@ public sealed partial class HomePage : Page
             await using var db =
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
-
+            await LoadDashboardBranchesAsync(db);
 
             // ==========================================
             // SYSTEM SETTINGS
@@ -202,19 +501,58 @@ public sealed partial class HomePage : Page
             // ==========================================
             // KPI
             // ==========================================
+            var totalRepairsQuery =
+                db.Repairs
+                    .AsNoTracking()
+                    .AsQueryable();
+
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                totalRepairsQuery =
+                    totalRepairsQuery.Where(r =>
+                        r.ServiceRequest.BranchId ==
+                        _selectedDashboardBranchId.Value);
+            }
 
             var totalRepairs =
-                await db.Repairs.CountAsync();
+                await totalRepairsQuery.CountAsync();
 
-            var pendingRepairs =
-                await db.Repairs
-                    .CountAsync(r =>
+            var pendingRepairsQuery =
+                db.Repairs
+                    .AsNoTracking()
+                    .Where(r =>
                         r.Status == "Pending");
 
-            var completedRepairs =
-                await db.Repairs
-                    .CountAsync(r =>
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                pendingRepairsQuery =
+                    pendingRepairsQuery.Where(r =>
+                        r.ServiceRequest.BranchId ==
+                        _selectedDashboardBranchId.Value);
+            }
+
+            var pendingRepairs =
+                await pendingRepairsQuery.CountAsync();
+
+            var completedRepairsQuery =
+                db.Repairs
+                    .AsNoTracking()
+                    .Where(r =>
                         r.Status == "Completed");
+
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                completedRepairsQuery =
+                    completedRepairsQuery.Where(r =>
+                        r.ServiceRequest.BranchId ==
+                        _selectedDashboardBranchId.Value);
+            }
+
+            var completedRepairs =
+                await completedRepairsQuery.CountAsync();
 
 
             // ==========================================
@@ -225,12 +563,24 @@ public sealed partial class HomePage : Page
             // payments are included in actual revenue.
             // ==========================================
 
-            var totalRevenue =
-                await db.Payments
+            var totalRevenueQuery =
+                db.Payments
+                    .AsNoTracking()
                     .Where(p =>
-                        p.Status == "Completed")
-                    .Select(p =>
-                        (decimal?)p.Amount)
+                        p.Status == "Completed");
+
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                totalRevenueQuery =
+                    totalRevenueQuery.Where(p =>
+                        p.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                        _selectedDashboardBranchId.Value);
+            }
+
+            var totalRevenue =
+                await totalRevenueQuery
+                    .Select(p => (decimal?)p.Amount)
                     .SumAsync()
                 ?? 0;
 
@@ -256,12 +606,25 @@ public sealed partial class HomePage : Page
             // REPAIR STATUS
             // ==========================================
 
-            var inProgressRepairs =
-                await db.Repairs
-                    .CountAsync(r =>
+            var inProgressRepairsQuery =
+                db.Repairs
+                    .AsNoTracking()
+                    .Where(r =>
                         r.Status == "Diagnosing" ||
                         r.Status == "In Repair" ||
                         r.Status == "Ready for Pickup");
+
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                inProgressRepairsQuery =
+                    inProgressRepairsQuery.Where(r =>
+                        r.ServiceRequest.BranchId ==
+                        _selectedDashboardBranchId.Value);
+            }
+
+            var inProgressRepairs =
+                await inProgressRepairsQuery.CountAsync();
 
 
             UpdateRepairStatus(
@@ -349,13 +712,28 @@ public sealed partial class HomePage : Page
             var endDate =
                 today.AddDays(1);
 
-            var payments =
-                await db.Payments
+            var paymentsQuery =
+                db.Payments
                     .AsNoTracking()
                     .Where(p =>
                         p.Status == "Completed" &&
                         p.PaymentDate >= startDate &&
-                        p.PaymentDate < endDate)
+                        p.PaymentDate < endDate);
+
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                var branchId =
+                    _selectedDashboardBranchId.Value;
+
+                paymentsQuery =
+                    paymentsQuery.Where(p =>
+                        p.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                        branchId);
+            }
+
+            var payments =
+                await paymentsQuery
                     .Select(p => new
                     {
                         p.PaymentDate,
@@ -420,13 +798,28 @@ public sealed partial class HomePage : Page
                 currentMonth.AddMonths(1);
 
 
-            var payments =
-                await db.Payments
+            var paymentsQuery =
+                db.Payments
                     .AsNoTracking()
                     .Where(p =>
                         p.Status == "Completed" &&
                         p.PaymentDate >= startMonth &&
-                        p.PaymentDate < endMonth)
+                        p.PaymentDate < endMonth);
+
+            if (_branchManagementEnabled &&
+                _selectedDashboardBranchId.HasValue)
+            {
+                var branchId =
+                    _selectedDashboardBranchId.Value;
+
+                paymentsQuery =
+                    paymentsQuery.Where(p =>
+                        p.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                        branchId);
+            }
+
+            var payments =
+                await paymentsQuery
                     .Select(p => new
                     {
                         p.PaymentDate,
@@ -480,13 +873,28 @@ public sealed partial class HomePage : Page
             currentYear - 4;
 
 
-        var paymentsYearly =
-            await db.Payments
+        var paymentsYearlyQuery =
+            db.Payments
                 .AsNoTracking()
                 .Where(p =>
                     p.Status == "Completed" &&
                     p.PaymentDate.Year >= startYear &&
-                    p.PaymentDate.Year <= currentYear)
+                    p.PaymentDate.Year <= currentYear);
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            paymentsYearlyQuery =
+                paymentsYearlyQuery.Where(p =>
+                    p.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                    branchId);
+        }
+
+        var paymentsYearly =
+            await paymentsYearlyQuery
                 .Select(p => new
                 {
                     p.PaymentDate,
@@ -1343,13 +1751,28 @@ public sealed partial class HomePage : Page
         // Use Service Request date because every
         // repair is connected to a service request.
 
-        var repairDates =
-            await db.Repairs
+        var repairDatesQuery =
+            db.Repairs
                 .AsNoTracking()
                 .Where(r =>
                     r.ServiceRequest != null &&
                     r.ServiceRequest.RequestDate >= startMonth &&
-                    r.ServiceRequest.RequestDate < endMonth)
+                    r.ServiceRequest.RequestDate < endMonth);
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            repairDatesQuery =
+                repairDatesQuery.Where(r =>
+                    r.ServiceRequest!.BranchId ==
+                    branchId);
+        }
+
+        var repairDates =
+            await repairDatesQuery
                 .Select(r =>
                     r.ServiceRequest!.RequestDate)
                 .ToListAsync();
@@ -1652,8 +2075,8 @@ public sealed partial class HomePage : Page
     private async Task LoadRecentRepairsAsync(
         TenantDbContext db)
     {
-        var repairs =
-            await db.Repairs
+        var repairsQuery =
+            db.Repairs
                 .AsNoTracking()
                 .Include(r =>
                     r.ServiceRequest)
@@ -1661,6 +2084,22 @@ public sealed partial class HomePage : Page
                         sr.Device)
                     .ThenInclude(d =>
                         d.Customer)
+                .AsQueryable();
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            repairsQuery =
+                repairsQuery.Where(r =>
+                    r.ServiceRequest!.BranchId ==
+                    branchId);
+        }
+
+        var repairs =
+            await repairsQuery
                 .OrderByDescending(
                     r => r.RepairId)
                 .Take(5)
@@ -1709,8 +2148,8 @@ public sealed partial class HomePage : Page
     private async Task LoadRecentTransactionsAsync(
         TenantDbContext db)
     {
-        var transactions =
-            await db.Payments
+        var transactionsQuery =
+            db.Payments
                 .AsNoTracking()
                 .Include(p =>
                     p.Invoice)
@@ -1722,6 +2161,22 @@ public sealed partial class HomePage : Page
                         sr.Device)
                     .ThenInclude(d =>
                         d.Customer)
+                .AsQueryable();
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            transactionsQuery =
+                transactionsQuery.Where(p =>
+                    p.Invoice!.Repair!.ServiceRequest!.BranchId ==
+                    branchId);
+        }
+
+        var transactions =
+            await transactionsQuery
                 .OrderByDescending(
                     p => p.PaymentDate)
                 .Take(5)
@@ -1766,8 +2221,8 @@ public sealed partial class HomePage : Page
     private async Task LoadLowStockAsync(
         TenantDbContext db)
     {
-        var lowStock =
-            await db.Inventories
+        var lowStockQuery =
+            db.Inventories
                 .AsNoTracking()
                 .Include(i =>
                     i.Item)
@@ -1775,7 +2230,21 @@ public sealed partial class HomePage : Page
                     i.Item != null &&
                     i.Item.IsActive &&
                     i.QuantityOnHand <=
-                    i.Item.ReorderLevel)
+                    i.Item.ReorderLevel);
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            lowStockQuery =
+                lowStockQuery.Where(i =>
+                    i.BranchId == branchId);
+        }
+
+        var lowStock =
+            await lowStockQuery
                 .OrderBy(
                     i => i.QuantityOnHand)
                 .Take(8)
@@ -1788,13 +2257,28 @@ public sealed partial class HomePage : Page
                 .ToListAsync();
 
 
-        var lowStockTotal =
-            await db.Inventories
-                .CountAsync(i =>
+        var lowStockTotalQuery =
+            db.Inventories
+                .AsNoTracking()
+                .Where(i =>
                     i.Item != null &&
                     i.Item.IsActive &&
                     i.QuantityOnHand <=
                     i.Item.ReorderLevel);
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            lowStockTotalQuery =
+                lowStockTotalQuery.Where(i =>
+                    i.BranchId == branchId);
+        }
+
+        var lowStockTotal =
+            await lowStockTotalQuery.CountAsync();
 
 
         LowStockCountText.Text =
@@ -1821,13 +2305,28 @@ public sealed partial class HomePage : Page
     private async Task LoadOutstandingPaymentsAsync(
         TenantDbContext db)
     {
-        var invoices =
-            await db.Invoices
+        var invoicesQuery =
+            db.Invoices
                 .AsNoTracking()
                 .Include(i =>
                     i.Payments)
                 .Where(i =>
-                    i.Status != "Cancelled")
+                    i.Status != "Cancelled");
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            invoicesQuery =
+                invoicesQuery.Where(i =>
+                    i.Repair!.ServiceRequest!.BranchId ==
+                    branchId);
+        }
+
+        var invoices =
+            await invoicesQuery
                 .Select(i => new
                 {
                     i.TotalAmount,
@@ -1886,12 +2385,27 @@ public sealed partial class HomePage : Page
             today.AddDays(1);
 
 
-        var attendance =
-            await db.Attendances
+        var attendanceQuery =
+            db.Attendances
                 .AsNoTracking()
                 .Where(a =>
                     a.AttendanceDate >= today &&
-                    a.AttendanceDate < tomorrow)
+                    a.AttendanceDate < tomorrow);
+
+        if (_branchManagementEnabled &&
+            _selectedDashboardBranchId.HasValue)
+        {
+            var branchId =
+                _selectedDashboardBranchId.Value;
+
+            attendanceQuery =
+                attendanceQuery.Where(a =>
+                    a.Employee!.BranchId ==
+                    branchId);
+        }
+
+        var attendance =
+            await attendanceQuery
                 .Select(a =>
                     a.Status)
                 .ToListAsync();
