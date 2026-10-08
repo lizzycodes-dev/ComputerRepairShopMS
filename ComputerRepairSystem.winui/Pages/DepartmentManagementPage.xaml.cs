@@ -20,6 +20,10 @@ public sealed partial class DepartmentManagementPage : Page
 
     private DepartmentDisplayItem? _selectedDepartment;
 
+    private List<DepartmentDisplayItem> _filteredDepartments = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
     public DepartmentManagementPage(
         ITenantDbContextFactory tenantDbFactory)
     {
@@ -63,7 +67,7 @@ public sealed partial class DepartmentManagementPage : Page
             var departments =
                 await db.Departments
                     .AsNoTracking()
-                    .OrderBy(x => x.DepartmentName)
+                    .OrderByDescending(x => x.DepartmentId)
                     .ToListAsync();
 
             _allDepartments =
@@ -105,7 +109,7 @@ public sealed partial class DepartmentManagementPage : Page
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            DepartmentsListView.ItemsSource =
+            _filteredDepartments =
                 _allDepartments
                     .Where(x =>
                         x.DepartmentName.Contains(
@@ -119,14 +123,100 @@ public sealed partial class DepartmentManagementPage : Page
         }
         else
         {
-            DepartmentsListView.ItemsSource =
+            _filteredDepartments =
                 _allDepartments.ToList();
         }
+
+        _currentPage = 1;
+
+        UpdatePagination();
 
         _selectedDepartment = null;
 
         EditDepartmentButton.IsEnabled = false;
         DeleteDepartmentButton.IsEnabled = false;
+    }
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredDepartments.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedDepartments =
+            _filteredDepartments
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        DepartmentsListView.ItemsSource = pagedDepartments;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_filteredDepartments.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredDepartments.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
+    }
+
+
+    // ==========================================
+    // REFRESH
+    // ==========================================
+
+    private async void RefreshDepartmentButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        DepartmentSearchBox.Text = string.Empty;
+
+        await LoadDepartmentsAsync();
     }
 
     // ============================================================

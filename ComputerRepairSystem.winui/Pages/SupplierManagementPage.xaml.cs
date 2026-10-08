@@ -12,6 +12,15 @@ public sealed partial class SupplierManagementPage : Page
 {
     private readonly TenantDbContextFactory _tenantDbFactory;
 
+    // ==========================================
+    // PAGINATION STATE
+    // ==========================================
+
+    private List<Supplier> _allSuppliers = new();
+    private List<Supplier> _filteredSuppliers = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
     public SupplierManagementPage(
         TenantDbContextFactory tenantDbFactory)
     {
@@ -38,34 +47,52 @@ public sealed partial class SupplierManagementPage : Page
         if (CurrentUser.CompanyId == null)
             return;
 
-        await using var db =
-            await _tenantDbFactory.CreateAsync(
-                CurrentUser.CompanyId.Value);
-
-        var search = SearchBox.Text?.Trim();
-
-        var query = db.Suppliers
-            .AsNoTracking()
-            .Where(x => x.IsActive);
-
-        if (!string.IsNullOrWhiteSpace(search))
+        try
         {
-            query = query.Where(x =>
-                x.SupplierCode.Contains(search) ||
-                x.SupplierName.Contains(search) ||
-                (x.ContactPerson != null &&
-                 x.ContactPerson.Contains(search)) ||
-                (x.Phone != null &&
-                 x.Phone.Contains(search)) ||
-                (x.Email != null &&
-                 x.Email.Contains(search)));
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
+
+            var search = SearchBox.Text?.Trim();
+
+            var query = db.Suppliers
+                .AsNoTracking()
+                .Where(x => x.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(x =>
+                    x.SupplierCode.Contains(search) ||
+                    x.SupplierName.Contains(search) ||
+                    (x.ContactPerson != null &&
+                     x.ContactPerson.Contains(search)) ||
+                    (x.Phone != null &&
+                     x.Phone.Contains(search)) ||
+                    (x.Email != null &&
+                     x.Email.Contains(search)));
+            }
+
+            _allSuppliers = await query
+                .OrderByDescending(x => x.SupplierId)
+                .ToListAsync();
+
+            ApplyFilter();
         }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync(
+                $"Unable to load suppliers.\n\n{ex.Message}");
+        }
+    }
 
-        var suppliers = await query
-            .OrderBy(x => x.SupplierName)
-            .ToListAsync();
 
-        SupplierListView.ItemsSource = suppliers;
+    private void ApplyFilter()
+    {
+        _filteredSuppliers = _allSuppliers;
+
+        _currentPage = 1;
+
+        UpdatePagination();
     }
 
     // ==========================================
@@ -87,7 +114,77 @@ public sealed partial class SupplierManagementPage : Page
         object sender,
         RoutedEventArgs e)
     {
+        SearchBox.Text = string.Empty;
+
         await LoadSuppliersAsync();
+    }
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredSuppliers.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedSuppliers =
+            _filteredSuppliers
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        SupplierListView.ItemsSource = pagedSuppliers;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_filteredSuppliers.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredSuppliers.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
     }
 
     // ==========================================

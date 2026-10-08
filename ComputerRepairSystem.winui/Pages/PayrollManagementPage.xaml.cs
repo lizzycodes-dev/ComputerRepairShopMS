@@ -16,6 +16,9 @@ public sealed partial class PayrollManagementPage : Page
     private readonly MasterErpDbContext _masterDb;
     private readonly CurrentBranchContext _currentBranchContext;
 
+    private List<PayrollRow> _filteredPayrolls = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
     public PayrollManagementPage(
         TenantDbContextFactory tenantDbFactory,
         MasterErpDbContext masterDb,
@@ -226,8 +229,11 @@ public sealed partial class PayrollManagementPage : Page
                     })
                     .ToList();
 
-            PayrollList.ItemsSource = rows;
-            UpdatePayrollSummary(payrolls);
+            _filteredPayrolls = rows;
+
+            _currentPage = 1;
+
+            UpdatePagination();
         }
         catch (Exception ex)
         {
@@ -235,6 +241,75 @@ public sealed partial class PayrollManagementPage : Page
                 "Error Loading Payroll",
                 ex.Message);
         }
+    }
+
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredPayrolls.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedRows =
+            _filteredPayrolls
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        PayrollList.ItemsSource = pagedRows;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_filteredPayrolls.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredPayrolls.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
     }
 
 

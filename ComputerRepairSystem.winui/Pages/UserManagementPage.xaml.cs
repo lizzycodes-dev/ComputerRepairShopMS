@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.ApplicationModel.Contacts;
+
 namespace ComputerRepairSystem_winui.Pages;
 
 public sealed partial class UserManagementPage : Page
@@ -16,9 +16,17 @@ public sealed partial class UserManagementPage : Page
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly MasterErpDbContext _masterDb;
     private readonly TenantDbContextFactory _tenantDbFactory;
-    private readonly SubscriptionAccessService
-        _subscriptionAccessService;
-     
+    private readonly SubscriptionAccessService _subscriptionAccessService;
+
+    // ==========================================
+    // PAGINATION STATE
+    // ==========================================
+
+    private List<UserRow> _allUserRows = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
+
     public UserManagementPage(
         UserManager<ApplicationUser> userManager,
         MasterErpDbContext masterDb,
@@ -70,15 +78,12 @@ public sealed partial class UserManagementPage : Page
             }
             else if (CurrentUser.Role == "Admin")
             {
-                // Company Admin can only see users
-                // belonging to their own company.
                 usersQuery =
                     usersQuery.Where(
                         u => u.CompanyId == CurrentUser.CompanyId);
             }
             else
             {
-                // Other roles should not see users.
                 usersQuery =
                     usersQuery.Where(u => false);
             }
@@ -101,7 +106,7 @@ public sealed partial class UserManagementPage : Page
             // BUILD USER ROWS
             // ==========================================
 
-            var userRows = new List<UserRow>();
+            _allUserRows = new List<UserRow>();
 
             foreach (var user in users)
             {
@@ -116,7 +121,7 @@ public sealed partial class UserManagementPage : Page
                     roles.FirstOrDefault()
                     ?? "No Role";
 
-                userRows.Add(
+                _allUserRows.Add(
                     new UserRow
                     {
                         User = user,
@@ -129,9 +134,17 @@ public sealed partial class UserManagementPage : Page
                     });
             }
 
+            // Newest first — sort by Id descending.
+            // ApplicationUser.Id is a GUID string, so this
+            // gives a stable, deterministic order for paging.
+            _allUserRows =
+                _allUserRows
+                    .OrderByDescending(r => r.User.Id)
+                    .ToList();
 
-            UsersListView.ItemsSource =
-                userRows;
+            _currentPage = 1;
+
+            UpdatePagination();
 
             EditUserButton.IsEnabled =
                 UsersListView.SelectedItem != null;
@@ -145,6 +158,75 @@ public sealed partial class UserManagementPage : Page
                 "Error Loading Users",
                 ex.Message);
         }
+    }
+
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_allUserRows.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var paged =
+            _allUserRows
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        UsersListView.ItemsSource = paged;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_allUserRows.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_allUserRows.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
     }
 
 
@@ -174,10 +256,6 @@ public sealed partial class UserManagementPage : Page
     {
         try
         {
-            // ==========================================
-            // USER INFORMATION
-            // ==========================================
-
             var usernameBox = new TextBox
             {
                 Header = "Username",
@@ -202,12 +280,10 @@ public sealed partial class UserManagementPage : Page
                 PlaceholderText = "Select a role"
             };
 
-            // Basic roles
             roleBox.Items.Add("Admin");
             roleBox.Items.Add("Technician");
             roleBox.Items.Add("Receptionist");
 
-            // Super Admin can create another Super Admin
             if (CurrentUser.Role == "Super Admin")
             {
                 roleBox.Items.Insert(0, "Super Admin");
@@ -215,10 +291,6 @@ public sealed partial class UserManagementPage : Page
 
             roleBox.SelectedIndex = 0;
 
-
-            // ==========================================
-            // EMPLOYEE INFORMATION
-            // ==========================================
 
             var firstNameBox = new TextBox
             {
@@ -257,7 +329,6 @@ public sealed partial class UserManagementPage : Page
             };
 
 
-
             roleBox.SelectionChanged += (_, _) =>
             {
                 if (roleBox.SelectedItem is not string selectedRole)
@@ -282,10 +353,6 @@ public sealed partial class UserManagementPage : Page
                 Date = DateTimeOffset.Now
             };
 
-
-            // ==========================================
-            // COMPANY
-            // ==========================================
 
             var companies =
                 await _masterDb.Companies
@@ -326,9 +393,6 @@ public sealed partial class UserManagementPage : Page
                 }
             }
 
-            // ==========================================
-            // LOAD SUBSCRIPTION-BASED ROLES
-            // ==========================================
 
             if (companyBox.SelectedItem is Company selectedCompany)
             {
@@ -336,6 +400,7 @@ public sealed partial class UserManagementPage : Page
                     await _subscriptionAccessService
                         .GetAccessibleModuleCodesAsync(
                             selectedCompany.CompanyId);
+
                 if (accessibleModules.Contains("EMPLOYEE") &&
                     accessibleModules.Contains("ATTENDANCE") &&
                     accessibleModules.Contains("PAYROLL"))
@@ -349,13 +414,10 @@ public sealed partial class UserManagementPage : Page
                 }
             }
 
-            // ==========================================
-            // REFRESH ROLES WHEN COMPANY CHANGES
-            // ==========================================
 
             companyBox.SelectionChanged += async (_, _) =>
             {
-                if (companyBox.SelectedItem is not Company selectedCompany)
+                if (companyBox.SelectedItem is not Company changedCompany)
                     return;
 
                 roleBox.Items.Clear();
@@ -372,7 +434,7 @@ public sealed partial class UserManagementPage : Page
                 var accessibleModules =
                     await _subscriptionAccessService
                         .GetAccessibleModuleCodesAsync(
-                            selectedCompany.CompanyId);
+                            changedCompany.CompanyId);
 
                 if (accessibleModules.Contains("EMPLOYEE") &&
                     accessibleModules.Contains("ATTENDANCE") &&
@@ -390,20 +452,12 @@ public sealed partial class UserManagementPage : Page
             };
 
 
-            // ==========================================
-            // ACTIVE
-            // ==========================================
-
             var activeCheckBox = new CheckBox
             {
                 Content = "Active",
                 IsChecked = true
             };
 
-
-            // ==========================================
-            // PANEL
-            // ==========================================
 
             var panel = new StackPanel
             {
@@ -442,13 +496,8 @@ public sealed partial class UserManagementPage : Page
             panel.Children.Add(addressBox);
             panel.Children.Add(positionBox);
             panel.Children.Add(hireDatePicker);
-
             panel.Children.Add(activeCheckBox);
 
-
-            // ==========================================
-            // DIALOG
-            // ==========================================
 
             var scrollViewer = new ScrollViewer
             {
@@ -466,8 +515,7 @@ public sealed partial class UserManagementPage : Page
                 PrimaryButtonText = "Add",
                 CloseButtonText = "Cancel",
 
-                DefaultButton =
-                    ContentDialogButton.Primary,
+                DefaultButton = ContentDialogButton.Primary,
 
                 XamlRoot = XamlRoot
             };
@@ -488,7 +536,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Username is required.");
-
                 return;
             }
 
@@ -497,7 +544,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Email is required.");
-
                 return;
             }
 
@@ -506,7 +552,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Password is required.");
-
                 return;
             }
 
@@ -515,7 +560,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Please select a role.");
-
                 return;
             }
 
@@ -524,7 +568,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "First name is required.");
-
                 return;
             }
 
@@ -533,7 +576,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Last name is required.");
-
                 return;
             }
 
@@ -542,14 +584,9 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Position is required.");
-
                 return;
             }
 
-
-            // ==========================================
-            // SELECT ROLE
-            // ==========================================
 
             var selectedRole =
                 roleBox.SelectedItem?.ToString();
@@ -559,20 +596,14 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Please select a role.");
-
                 return;
             }
 
-
-            // ==========================================
-            // DETERMINE COMPANY
-            // ==========================================
 
             int? companyId = null;
 
             if (selectedRole == "Super Admin")
             {
-                // Super Admin is platform-level
                 companyId = null;
             }
             else if (CurrentUser.Role == "Admin")
@@ -582,7 +613,6 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Validation Error",
                         "Unable to determine your company.");
-
                     return;
                 }
 
@@ -596,16 +626,13 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Validation Error",
                         "Please select a company.");
-
                     return;
                 }
 
                 companyId =
                     subscriptionCompany.CompanyId;
             }
-            // ==========================================
-            // CHECK SUBSCRIPTION FOR SPECIALIZED ROLES
-            // ==========================================
+
 
             if (selectedRole == "HR Staff" ||
                 selectedRole == "Finance Staff")
@@ -615,7 +642,6 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Validation Error",
                         "A company is required for this role.");
-
                     return;
                 }
 
@@ -632,7 +658,6 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Modules Not Available",
                         "The selected company does not have all required HR modules.");
-
                     return;
                 }
 
@@ -642,15 +667,10 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Module Not Available",
                         "The selected company does not have the Finance module.");
-
                     return;
                 }
             }
 
-
-            // ==========================================
-            // CHECK DUPLICATE USERNAME
-            // ==========================================
 
             var existingUsername =
                 await _userManager.FindByNameAsync(
@@ -661,14 +681,9 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "User Already Exists",
                     "That username is already being used.");
-
                 return;
             }
 
-
-            // ==========================================
-            // CHECK DUPLICATE EMAIL
-            // ==========================================
 
             var existingEmail =
                 await _userManager.FindByEmailAsync(
@@ -679,34 +694,18 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Email Already Exists",
                     "That email is already being used.");
-
                 return;
             }
 
 
-            // ==========================================
-            // CREATE APPLICATION USER
-            // ==========================================
-
             var user = new ApplicationUser
             {
-                UserName =
-                    usernameBox.Text.Trim(),
-
-                Email =
-                    emailBox.Text.Trim(),
-
-                CompanyId =
-                    companyId,
-
-                IsActive =
-                    activeCheckBox.IsChecked == true
+                UserName = usernameBox.Text.Trim(),
+                Email = emailBox.Text.Trim(),
+                CompanyId = companyId,
+                IsActive = activeCheckBox.IsChecked == true
             };
 
-
-            // ==========================================
-            // CREATE USER IN MASTER DB
-            // ==========================================
 
             var createResult =
                 await _userManager.CreateAsync(
@@ -718,14 +717,9 @@ public sealed partial class UserManagementPage : Page
                 await ShowIdentityErrorsAsync(
                     "Unable to Add User",
                     createResult);
-
                 return;
             }
 
-
-            // ==========================================
-            // ASSIGN ROLE
-            // ==========================================
 
             var roleResult =
                 await _userManager.AddToRoleAsync(
@@ -739,14 +733,9 @@ public sealed partial class UserManagementPage : Page
                     roleResult);
 
                 await _userManager.DeleteAsync(user);
-
                 return;
             }
 
-
-            // ==========================================
-            // SUPER ADMIN DOES NOT NEED EMPLOYEE
-            // ==========================================
 
             if (selectedRole == "Super Admin")
             {
@@ -755,14 +744,9 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "User Added",
                     $"Super Admin '{user.UserName}' was created successfully.");
-
                 return;
             }
 
-
-            // ==========================================
-            // CREATE EMPLOYEE IN TENANT DB
-            // ==========================================
 
             if (!companyId.HasValue)
             {
@@ -775,7 +759,6 @@ public sealed partial class UserManagementPage : Page
                     selectedRole);
 
                 await _userManager.DeleteAsync(user);
-
                 return;
             }
 
@@ -792,41 +775,32 @@ public sealed partial class UserManagementPage : Page
                     BranchId = null,
                     DepartmentId = null,
 
-                    FirstName =
-                        firstNameBox.Text.Trim(),
+                    FirstName = firstNameBox.Text.Trim(),
 
                     MiddleName =
-                        string.IsNullOrWhiteSpace(
-                            middleNameBox.Text)
+                        string.IsNullOrWhiteSpace(middleNameBox.Text)
                             ? null
                             : middleNameBox.Text.Trim(),
 
-                    LastName =
-                        lastNameBox.Text.Trim(),
+                    LastName = lastNameBox.Text.Trim(),
 
                     Phone =
-                        string.IsNullOrWhiteSpace(
-                            phoneBox.Text)
+                        string.IsNullOrWhiteSpace(phoneBox.Text)
                             ? null
                             : phoneBox.Text.Trim(),
 
-                    Email =
-                        emailBox.Text.Trim(),
+                    Email = emailBox.Text.Trim(),
 
                     Address =
-                        string.IsNullOrWhiteSpace(
-                            addressBox.Text)
+                        string.IsNullOrWhiteSpace(addressBox.Text)
                             ? null
                             : addressBox.Text.Trim(),
 
-                    Position =
-                        positionBox.Text.Trim(),
+                    Position = positionBox.Text.Trim(),
 
-                    HireDate =
-                        hireDatePicker.Date.Date,
+                    HireDate = hireDatePicker.Date.Date,
 
-                    IsActive =
-                        activeCheckBox.IsChecked == true
+                    IsActive = activeCheckBox.IsChecked == true
                 };
 
                 tenantDb.Employees.Add(employee);
@@ -835,10 +809,6 @@ public sealed partial class UserManagementPage : Page
             }
             catch (Exception ex)
             {
-                // Employee creation failed.
-                // Remove the Master DB user so we don't
-                // leave an account without an employee record.
-
                 await _userManager.RemoveFromRoleAsync(
                     user,
                     selectedRole);
@@ -852,10 +822,6 @@ public sealed partial class UserManagementPage : Page
                 return;
             }
 
-
-            // ==========================================
-            // REFRESH
-            // ==========================================
 
             await LoadUsersAsync();
 
@@ -873,6 +839,7 @@ public sealed partial class UserManagementPage : Page
         }
     }
 
+
     // ==========================================
     // EDIT USER
     // ==========================================
@@ -881,17 +848,12 @@ public sealed partial class UserManagementPage : Page
         object sender,
         RoutedEventArgs e)
     {
-        // ==========================================
-        // CHECK SELECTION
-        // ==========================================
-
         if (UsersListView.SelectedItem
             is not UserRow selectedRow)
         {
             await ShowMessageAsync(
                 "No User Selected",
                 "Please select a user first.");
-
             return;
         }
 
@@ -899,10 +861,6 @@ public sealed partial class UserManagementPage : Page
 
         try
         {
-            // ==========================================
-            // GET FRESH TRACKED USER
-            // ==========================================
-
             var user =
                 await _userManager.FindByIdAsync(
                     selectedUser.Id);
@@ -914,7 +872,6 @@ public sealed partial class UserManagementPage : Page
                     "The selected user could not be found.");
 
                 await LoadUsersAsync();
-
                 return;
             }
 
@@ -924,9 +881,6 @@ public sealed partial class UserManagementPage : Page
             var currentRole =
                 currentRoles.FirstOrDefault();
 
-            // ==========================================
-            // ADMIN ACCESS CHECK
-            // ==========================================
 
             if (CurrentUser.Role == "Admin" &&
                 user.CompanyId != CurrentUser.CompanyId)
@@ -934,7 +888,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Access Denied",
                     "You can only edit users from your own company.");
-
                 return;
             }
 
@@ -949,13 +902,9 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Access Denied",
                     "You cannot edit a Super Admin.");
-
                 return;
             }
 
-            // ==========================================
-            // INPUT FIELDS
-            // ==========================================
 
             var usernameBox = new TextBox
             {
@@ -1013,9 +962,6 @@ public sealed partial class UserManagementPage : Page
                 companyBox.SelectedItem = currentCompany;
             }
 
-            // ==========================================
-            // LOAD ROLES FOR SELECTED COMPANY
-            // ==========================================
 
             async Task LoadRolesForCompanyAsync(
                 Company? selectedCompanyForRoles,
@@ -1023,17 +969,13 @@ public sealed partial class UserManagementPage : Page
             {
                 roleBox.Items.Clear();
 
-                // Basic roles
                 roleBox.Items.Add("Admin");
                 roleBox.Items.Add("Technician");
                 roleBox.Items.Add("Receptionist");
 
-                // Super Admin can edit/create Super Admin users
                 if (CurrentUser.Role == "Super Admin")
                 {
-                    roleBox.Items.Insert(
-                        0,
-                        "Super Admin");
+                    roleBox.Items.Insert(0, "Super Admin");
                 }
 
                 if (selectedCompanyForRoles != null)
@@ -1056,13 +998,10 @@ public sealed partial class UserManagementPage : Page
                     }
                 }
 
-                // Keep the existing role selected
-                // if that role is available.
                 if (!string.IsNullOrWhiteSpace(roleToSelect) &&
                     roleBox.Items.Contains(roleToSelect))
                 {
-                    roleBox.SelectedItem =
-                        roleToSelect;
+                    roleBox.SelectedItem = roleToSelect;
                 }
                 else
                 {
@@ -1070,14 +1009,10 @@ public sealed partial class UserManagementPage : Page
                 }
             }
 
-            // Load roles for the initial company
             await LoadRolesForCompanyAsync(
                 companyBox.SelectedItem as Company,
                 currentRole);
 
-            // ==========================================
-            // REFRESH ROLES WHEN COMPANY CHANGES
-            // ==========================================
 
             companyBox.SelectionChanged += async (_, _) =>
             {
@@ -1097,9 +1032,6 @@ public sealed partial class UserManagementPage : Page
                 IsChecked = user.IsActive
             };
 
-            // ==========================================
-            // DIALOG CONTENT
-            // ==========================================
 
             var panel = new StackPanel
             {
@@ -1120,8 +1052,7 @@ public sealed partial class UserManagementPage : Page
                 PrimaryButtonText = "Save",
                 CloseButtonText = "Cancel",
 
-                DefaultButton =
-                    ContentDialogButton.Primary,
+                DefaultButton = ContentDialogButton.Primary,
 
                 XamlRoot = XamlRoot
             };
@@ -1132,15 +1063,9 @@ public sealed partial class UserManagementPage : Page
             if (dialogResult != ContentDialogResult.Primary)
                 return;
 
-            // ==========================================
-            // VALIDATION
-            // ==========================================
 
-            var username =
-                usernameBox.Text.Trim();
-
-            var email =
-                emailBox.Text.Trim();
+            var username = usernameBox.Text.Trim();
+            var email = emailBox.Text.Trim();
 
             Company? selectedCompany = null;
 
@@ -1155,7 +1080,6 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Validation Error",
                         "Your company could not be found.");
-
                     return;
                 }
             }
@@ -1167,7 +1091,6 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Validation Error",
                         "Please select a company.");
-
                     return;
                 }
 
@@ -1179,7 +1102,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Username is required.");
-
                 return;
             }
 
@@ -1188,7 +1110,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Email is required.");
-
                 return;
             }
 
@@ -1200,13 +1121,9 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Validation Error",
                     "Please select a role.");
-
                 return;
             }
 
-            // ==========================================
-            // CHECK SUBSCRIPTION FOR SPECIALIZED ROLES
-            // ==========================================
 
             if (selectedRole == "HR Staff" ||
                 selectedRole == "Finance Staff")
@@ -1216,7 +1133,6 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Validation Error",
                         "A company is required for this role.");
-
                     return;
                 }
 
@@ -1233,7 +1149,6 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Modules Not Available",
                         "The selected company does not have all required HR modules.");
-
                     return;
                 }
 
@@ -1243,14 +1158,10 @@ public sealed partial class UserManagementPage : Page
                     await ShowMessageAsync(
                         "Module Not Available",
                         "The selected company does not have the Finance module.");
-
                     return;
                 }
             }
 
-            // ==========================================
-            // CHECK DUPLICATE USERNAME
-            // ==========================================
 
             var usernameExists =
                 await _userManager.FindByNameAsync(
@@ -1262,13 +1173,8 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Username Already Exists",
                     "That username is already being used.");
-
                 return;
             }
-
-            // ==========================================
-            // CHECK DUPLICATE EMAIL
-            // ==========================================
 
             var emailExists =
                 await _userManager.FindByEmailAsync(
@@ -1280,20 +1186,15 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Email Already Exists",
                     "That email is already being used.");
-
                 return;
             }
 
-            // ==========================================
-            // UPDATE ROLE
-            // ==========================================
 
             if (!string.Equals(
                     currentRole,
                     selectedRole,
                     StringComparison.OrdinalIgnoreCase))
             {
-                // Remove previous role
                 if (!string.IsNullOrWhiteSpace(currentRole))
                 {
                     var removeRoleResult =
@@ -1306,12 +1207,10 @@ public sealed partial class UserManagementPage : Page
                         await ShowIdentityErrorsAsync(
                             "Unable to Remove Previous Role",
                             removeRoleResult);
-
                         return;
                     }
                 }
 
-                // Add new role
                 var addRoleResult =
                     await _userManager.AddToRoleAsync(
                         user,
@@ -1323,7 +1222,6 @@ public sealed partial class UserManagementPage : Page
                         "Unable to Assign New Role",
                         addRoleResult);
 
-                    // Restore previous role
                     if (!string.IsNullOrWhiteSpace(currentRole))
                     {
                         await _userManager.AddToRoleAsync(
@@ -1335,9 +1233,6 @@ public sealed partial class UserManagementPage : Page
                 }
             }
 
-            // ==========================================
-            // UPDATE USERNAME
-            // ==========================================
 
             if (!string.Equals(
                     user.UserName,
@@ -1354,14 +1249,10 @@ public sealed partial class UserManagementPage : Page
                     await ShowIdentityErrorsAsync(
                         "Unable to Update Username",
                         usernameResult);
-
                     return;
                 }
             }
 
-            // ==========================================
-            // UPDATE EMAIL
-            // ==========================================
 
             if (!string.Equals(
                     user.Email,
@@ -1378,24 +1269,14 @@ public sealed partial class UserManagementPage : Page
                     await ShowIdentityErrorsAsync(
                         "Unable to Update Email",
                         emailResult);
-
                     return;
                 }
             }
 
-            // ==========================================
-            // UPDATE CUSTOM FIELDS
-            // ==========================================
 
-            user.CompanyId =
-                selectedCompany.CompanyId;
+            user.CompanyId = selectedCompany.CompanyId;
+            user.IsActive = activeCheckBox.IsChecked == true;
 
-            user.IsActive =
-                activeCheckBox.IsChecked == true;
-
-            // ==========================================
-            // SAVE CHANGES
-            // ==========================================
 
             var updateResult =
                 await _userManager.UpdateAsync(user);
@@ -1405,13 +1286,9 @@ public sealed partial class UserManagementPage : Page
                 await ShowIdentityErrorsAsync(
                     "Unable to Update User",
                     updateResult);
-
                 return;
             }
 
-            // ==========================================
-            // REFRESH LIST
-            // ==========================================
 
             await LoadUsersAsync();
 
@@ -1427,6 +1304,7 @@ public sealed partial class UserManagementPage : Page
         }
     }
 
+
     // ==========================================
     // DELETE USER
     // ==========================================
@@ -1441,7 +1319,6 @@ public sealed partial class UserManagementPage : Page
             await ShowMessageAsync(
                 "No User Selected",
                 "Please select a user first.");
-
             return;
         }
 
@@ -1460,8 +1337,7 @@ public sealed partial class UserManagementPage : Page
             PrimaryButtonText = "Delete",
             CloseButtonText = "Cancel",
 
-            DefaultButton =
-                ContentDialogButton.Close,
+            DefaultButton = ContentDialogButton.Close,
 
             XamlRoot = XamlRoot
         };
@@ -1474,7 +1350,6 @@ public sealed partial class UserManagementPage : Page
 
         try
         {
-            // Get a fresh tracked instance from Identity
             var user =
                 await _userManager.FindByIdAsync(
                     selectedUser.Id);
@@ -1499,7 +1374,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Access Denied",
                     "You cannot delete a Super Admin.");
-
                 return;
             }
 
@@ -1509,8 +1383,41 @@ public sealed partial class UserManagementPage : Page
                 await ShowMessageAsync(
                     "Access Denied",
                     "You can only delete users from your own company.");
-
                 return;
+            }
+
+            // ==========================================
+            // ⬇⬇⬇ FIX: delete the tenant employee record first
+            // ==========================================
+
+            if (user.CompanyId.HasValue)
+            {
+                try
+                {
+                    await using var tenantDb =
+                        await _tenantDbFactory.CreateAsync(
+                            user.CompanyId.Value);
+
+                    var employee =
+                        await tenantDb.Employees
+                            .FirstOrDefaultAsync(e =>
+                                e.MasterUserId == user.Id);
+
+                    if (employee != null)
+                    {
+                        tenantDb.Employees.Remove(employee);
+                        await tenantDb.SaveChangesAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await ShowMessageAsync(
+                        "Cleanup Error",
+                        "The user could not be deleted because the linked employee record could not be removed.\n\n" +
+                        ex.Message);
+
+                    return;
+                }
             }
 
             var deleteResult =
@@ -1521,7 +1428,6 @@ public sealed partial class UserManagementPage : Page
                 await ShowIdentityErrorsAsync(
                     "Unable to Delete User",
                     deleteResult);
-
                 return;
             }
 
@@ -1590,5 +1496,22 @@ public sealed partial class UserManagementPage : Page
         await ShowMessageAsync(
             title,
             errors);
+    }
+
+
+    // ==========================================
+    // USER ROW
+    // ==========================================
+
+    private sealed class UserRow
+    {
+        public ApplicationUser User { get; set; } = null!;
+
+        public string CompanyName { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+
+        public string StatusText =>
+            User.IsActive ? "Active" : "Inactive";
     }
 }

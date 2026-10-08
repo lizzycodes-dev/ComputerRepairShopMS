@@ -12,6 +12,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -35,9 +36,23 @@
 
             <Button
                 Grid.Column="1"
-                Content="Add Supplier"
-                Click="AddSupplierButton_Click"
-                Padding="16,8"/>
+                Padding="16,8"
+                Click="AddSupplierButton_Click">
+
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+
+                    <SymbolIcon Symbol="Add"/>
+
+                    <TextBlock
+                        Text="Add Supplier"
+                        VerticalAlignment="Center"/>
+
+                </StackPanel>
+
+            </Button>
         </Grid>
 
         <!-- Search -->
@@ -55,17 +70,30 @@
 
             <Button
                 Grid.Column="1"
-                Content="Refresh"
-                Click="RefreshButton_Click"
-                Padding="16,8"/>
+                Padding="16,8"
+                Click="RefreshButton_Click">
+
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+
+                    <SymbolIcon Symbol="Refresh"/>
+
+                    <TextBlock
+                        Text="Refresh"
+                        VerticalAlignment="Center"/>
+
+                </StackPanel>
+
+            </Button>
         </Grid>
 
         <!-- Supplier List -->
         <Border
             Grid.Row="2"
             BorderThickness="1"
-            CornerRadius="8"
-            Padding="12">
+            CornerRadius="8">
 
             <Grid>
 
@@ -75,30 +103,36 @@
                 </Grid.RowDefinitions>
 
                 <!-- Table Header -->
-                <Grid
+                <Border
                     Grid.Row="0"
-                    Padding="8">
+                    BorderThickness="0,0,0,1"
+                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="120"/>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="1.2*"/>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="110"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid Padding="16,12">
 
-                    <TextBlock Grid.Column="0" Text="ID" FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="1" Text="Code" FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="2" Text="Supplier" FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="3" Text="Contact Person" FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="4" Text="Phone" FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="5" Text="Email" FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="6" Text="Address" FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="7" Text="Action" FontWeight="SemiBold"/>
-                </Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.5*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.5*"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="ID" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="Code" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="2" Text="Supplier" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="3" Text="Contact Person" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="4" Text="Phone" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="5" Text="Email" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="6" Text="Address" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="7" Text="Action" FontWeight="SemiBold" MinWidth="160"/>
+
+                    </Grid>
+
+                </Border>
 
                 <!-- Supplier Rows -->
                 <ListView
@@ -108,66 +142,114 @@
 
                     <ListView.ItemTemplate>
                         <DataTemplate>
-                            <Grid Padding="8">
 
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="2*"/>
-                                    <ColumnDefinition Width="1.5*"/>
-                                    <ColumnDefinition Width="1.2*"/>
-                                    <ColumnDefinition Width="1.5*"/>
-                                    <ColumnDefinition Width="2*"/>
-                                    <ColumnDefinition Width="110"/>
-                                </Grid.ColumnDefinitions>
+                            <Border
+                                BorderThickness="0,0,0,1"
+                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                                <TextBlock
-                                    Grid.Column="0"
-                                    Text="{Binding SupplierId}"/>
+                                <Grid Padding="16,12">
 
-                                <TextBlock
-                                    Grid.Column="1"
-                                    Text="{Binding SupplierCode}"/>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <TextBlock
-                                    Grid.Column="2"
-                                    Text="{Binding SupplierName}"/>
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="{Binding SupplierId}"
+                                        VerticalAlignment="Center"/>
 
-                                <TextBlock
-                                    Grid.Column="3"
-                                    Text="{Binding ContactPerson}"/>
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Text="{Binding SupplierCode}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock
-                                    Grid.Column="4"
-                                    Text="{Binding Phone}"/>
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Text="{Binding SupplierName}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock
-                                    Grid.Column="5"
-                                    Text="{Binding Email}"/>
+                                    <TextBlock
+                                        Grid.Column="3"
+                                        Text="{Binding ContactPerson}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock
-                                    Grid.Column="6"
-                                    Text="{Binding Address}"
-                                    TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock
+                                        Grid.Column="4"
+                                        Text="{Binding Phone}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <StackPanel
-                                    Grid.Column="7"
-                                    Orientation="Horizontal"
-                                    Spacing="6">
+                                    <TextBlock
+                                        Grid.Column="5"
+                                        Text="{Binding Email}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                    <Button
-                                        Content="Edit"
-                                        Click="EditSupplierButton_Click"
-                                        Tag="{Binding}"/>
+                                    <TextBlock
+                                        Grid.Column="6"
+                                        Text="{Binding Address}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                    <Button
-                                        Content="Delete"
-                                        Click="DeleteSupplierButton_Click"
-                                        Tag="{Binding}"/>
+                                    <StackPanel
+                                        Grid.Column="7"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
 
-                                </StackPanel>
+                                        <Button
+                                            Tag="{Binding}"
+                                            Click="EditSupplierButton_Click">
 
-                            </Grid>
+                                            <StackPanel
+                                                Orientation="Horizontal"
+                                                Spacing="6"
+                                                VerticalAlignment="Center">
+
+                                                <SymbolIcon Symbol="Edit"/>
+
+                                                <TextBlock
+                                                    Text="Edit"
+                                                    VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+                                        </Button>
+
+                                        <Button
+                                            Tag="{Binding}"
+                                            Click="DeleteSupplierButton_Click">
+
+                                            <StackPanel
+                                                Orientation="Horizontal"
+                                                Spacing="6"
+                                                VerticalAlignment="Center">
+
+                                                <SymbolIcon Symbol="Delete"/>
+
+                                                <TextBlock
+                                                    Text="Delete"
+                                                    VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+                                        </Button>
+
+                                    </StackPanel>
+
+                                </Grid>
+
+                            </Border>
+
                         </DataTemplate>
                     </ListView.ItemTemplate>
 
@@ -177,5 +259,58 @@
 
         </Border>
 
+        <!-- Pagination -->
+        <StackPanel
+            Grid.Row="3"
+            Orientation="Horizontal"
+            HorizontalAlignment="Center"
+            Spacing="12"
+            Margin="0,16,0,0">
+
+            <Button
+                x:Name="PreviousPageButton"
+                Click="PreviousPageButton_Click">
+
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+
+                    <SymbolIcon Symbol="Back"/>
+
+                    <TextBlock
+                        Text="Previous"
+                        VerticalAlignment="Center"/>
+
+                </StackPanel>
+
+            </Button>
+
+            <TextBlock
+                x:Name="PageInfoText"
+                VerticalAlignment="Center"/>
+
+            <Button
+                x:Name="NextPageButton"
+                Click="NextPageButton_Click">
+
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+
+                    <TextBlock
+                        Text="Next"
+                        VerticalAlignment="Center"/>
+
+                    <SymbolIcon Symbol="Forward"/>
+
+                </StackPanel>
+
+            </Button>
+
+        </StackPanel>
+
     </Grid>
+
 </Page>

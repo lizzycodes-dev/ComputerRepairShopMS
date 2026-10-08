@@ -37,6 +37,7 @@ public class CustomerRepository : ICustomerRepository
 
         return await context.Customers
             .AsNoTracking()
+            .OrderByDescending(c => c.CustomerId)
             .ToListAsync();
     }
 

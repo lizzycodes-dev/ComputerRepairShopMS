@@ -20,6 +20,10 @@ public sealed partial class BranchManagementPage : Page
 
     private BranchDisplayItem? _selectedBranch;
 
+    private List<BranchDisplayItem> _filteredBranches = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
     public BranchManagementPage(
         ITenantDbContextFactory tenantDbFactory)
     {
@@ -63,7 +67,7 @@ public sealed partial class BranchManagementPage : Page
             var branches =
                 await db.Branches
                     .AsNoTracking()
-                    .OrderBy(x => x.BranchName)
+                    .OrderByDescending(x => x.BranchId)
                     .ToListAsync();
 
             _allBranches =
@@ -111,7 +115,7 @@ public sealed partial class BranchManagementPage : Page
                     .Trim()
                     .ToLower();
 
-            BranchesListView.ItemsSource =
+            _filteredBranches =
                 _allBranches
                     .Where(x =>
                         x.BranchCode
@@ -124,7 +128,7 @@ public sealed partial class BranchManagementPage : Page
                                 search,
                                 StringComparison.OrdinalIgnoreCase)
                         ||
-                        x.Address
+                        (x.Address ?? string.Empty)
                             .Contains(
                                 search,
                                 StringComparison.OrdinalIgnoreCase)
@@ -142,14 +146,100 @@ public sealed partial class BranchManagementPage : Page
         }
         else
         {
-            BranchesListView.ItemsSource =
+            _filteredBranches =
                 _allBranches.ToList();
         }
+
+        _currentPage = 1;
+
+        UpdatePagination();
 
         _selectedBranch = null;
 
         EditBranchButton.IsEnabled = false;
         DeleteBranchButton.IsEnabled = false;
+    }
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredBranches.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedBranches =
+            _filteredBranches
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        BranchesListView.ItemsSource = pagedBranches;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_filteredBranches.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredBranches.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
+    }
+
+
+    // ==========================================
+    // REFRESH
+    // ==========================================
+
+    private async void RefreshBranchButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        BranchSearchBox.Text = string.Empty;
+
+        await LoadBranchesAsync();
     }
 
     // ============================================================

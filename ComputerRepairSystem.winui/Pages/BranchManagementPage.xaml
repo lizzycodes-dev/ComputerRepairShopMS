@@ -14,6 +14,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
@@ -42,6 +43,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBox
@@ -53,30 +55,51 @@
             <Button
                 x:Name="AddBranchButton"
                 Grid.Column="1"
-                Content="Add Branch"
-                Click="AddBranchButton_Click"/>
+                Click="AddBranchButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Add"/>
+                    <TextBlock Text="Add Branch" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
             <Button
                 x:Name="EditBranchButton"
                 Grid.Column="2"
-                Content="Edit"
                 IsEnabled="False"
-                Click="EditBranchButton_Click"/>
+                Click="EditBranchButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Edit"/>
+                    <TextBlock Text="Edit" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
             <Button
                 x:Name="DeleteBranchButton"
                 Grid.Column="3"
-                Content="Delete"
                 IsEnabled="False"
-                Click="DeleteBranchButton_Click"/>
+                Click="DeleteBranchButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Delete"/>
+                    <TextBlock Text="Delete" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <Button
+                x:Name="RefreshBranchButton"
+                Grid.Column="4"
+                Click="RefreshBranchButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Refresh"/>
+                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </Grid>
 
         <!-- BRANCH LIST -->
         <Border
             Grid.Row="2"
             BorderThickness="1"
-            CornerRadius="8"
-            Padding="12">
+            CornerRadius="8">
 
             <Grid>
 
@@ -86,50 +109,55 @@
                 </Grid.RowDefinitions>
 
                 <!-- COLUMN HEADERS -->
-                <Grid
+                <Border
                     Grid.Row="0"
-                    Padding="12"
-                    ColumnSpacing="12">
+                    BorderThickness="0,0,0,1"
+                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="120"/>
-                        <ColumnDefinition Width="180"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="130"/>
-                        <ColumnDefinition Width="220"/>
-                        <ColumnDefinition Width="100"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid
+                        Padding="16,12"
+                        ColumnSpacing="12">
 
-                    <TextBlock
-                        Grid.Column="0"
-                        Text="Branch Code"
-                        FontWeight="SemiBold"/>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="100"/>
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock
-                        Grid.Column="1"
-                        Text="Branch Name"
-                        FontWeight="SemiBold"/>
+                        <TextBlock
+                            Grid.Column="0"
+                            Text="Branch Code"
+                            FontWeight="SemiBold"/>
 
-                    <TextBlock
-                        Grid.Column="2"
-                        Text="Address"
-                        FontWeight="SemiBold"/>
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="Branch Name"
+                            FontWeight="SemiBold"/>
 
-                    <TextBlock
-                        Grid.Column="3"
-                        Text="Phone"
-                        FontWeight="SemiBold"/>
+                        <TextBlock
+                            Grid.Column="2"
+                            Text="Address"
+                            FontWeight="SemiBold"/>
 
-                    <TextBlock
-                        Grid.Column="4"
-                        Text="Email"
-                        FontWeight="SemiBold"/>
+                        <TextBlock
+                            Grid.Column="3"
+                            Text="Phone"
+                            FontWeight="SemiBold"/>
 
-                    <TextBlock
-                        Grid.Column="5"
-                        Text="Status"
-                        FontWeight="SemiBold"/>
-                </Grid>
+                        <TextBlock
+                            Grid.Column="4"
+                            Text="Email"
+                            FontWeight="SemiBold"/>
+
+                        <TextBlock
+                            Grid.Column="5"
+                            Text="Status"
+                            FontWeight="SemiBold"/>
+                    </Grid>
+                </Border>
 
                 <!-- LIST -->
                 <ListView
@@ -142,49 +170,60 @@
 
                         <DataTemplate>
 
-                            <Grid
-                                Padding="12"
-                                ColumnSpacing="12">
+                            <Border
+                                BorderThickness="0,0,0,1"
+                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="180"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="220"/>
-                                    <ColumnDefinition Width="100"/>
-                                </Grid.ColumnDefinitions>
+                                <Grid
+                                    Padding="16,12"
+                                    ColumnSpacing="12">
 
-                                <TextBlock
-                                    Grid.Column="0"
-                                    Text="{Binding BranchCode}"
-                                    TextTrimming="CharacterEllipsis"/>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="130"/>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <TextBlock
-                                    Grid.Column="1"
-                                    Text="{Binding BranchName}"
-                                    TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="{Binding BranchCode}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock
-                                    Grid.Column="2"
-                                    Text="{Binding Address}"
-                                    TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Text="{Binding BranchName}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock
-                                    Grid.Column="3"
-                                    Text="{Binding Phone}"
-                                    TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Text="{Binding Address}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock
-                                    Grid.Column="4"
-                                    Text="{Binding Email}"
-                                    TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock
+                                        Grid.Column="3"
+                                        Text="{Binding Phone}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock
-                                    Grid.Column="5"
-                                    Text="{Binding Status}"/>
+                                    <TextBlock
+                                        Grid.Column="4"
+                                        Text="{Binding Email}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                            </Grid>
+                                    <TextBlock
+                                        Grid.Column="5"
+                                        Text="{Binding Status}"
+                                        VerticalAlignment="Center"/>
+
+                                </Grid>
+                            </Border>
 
                         </DataTemplate>
 
@@ -195,6 +234,37 @@
             </Grid>
 
         </Border>
+
+        <!-- PAGINATION -->
+        <StackPanel
+            Grid.Row="3"
+            Orientation="Horizontal"
+            HorizontalAlignment="Center"
+            Spacing="12">
+
+            <Button
+                x:Name="PreviousPageButton"
+                Click="PreviousPageButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Back"/>
+                    <TextBlock Text="Previous" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <TextBlock
+                x:Name="PageInfoText"
+                VerticalAlignment="Center"/>
+
+            <Button
+                x:Name="NextPageButton"
+                Click="NextPageButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="Next" VerticalAlignment="Center"/>
+                    <SymbolIcon Symbol="Forward"/>
+                </StackPanel>
+            </Button>
+
+        </StackPanel>
 
     </Grid>
 

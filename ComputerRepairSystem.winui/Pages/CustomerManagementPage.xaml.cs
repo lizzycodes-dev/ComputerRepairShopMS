@@ -9,8 +9,16 @@ public sealed partial class CustomerManagementPage : Page
 {
     private readonly CustomerService _customerService;
 
+    // ==========================================
+    // PAGINATION STATE
+    // ==========================================
+
     private List<Customer> _customers = new();
+    private List<Customer> _filteredCustomers = new();
     private Customer? _selectedCustomer;
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
 
     public CustomerManagementPage(
         CustomerService customerService)
@@ -22,12 +30,22 @@ public sealed partial class CustomerManagementPage : Page
         Loaded += CustomerManagementPage_Loaded;
     }
 
+
+    // ==========================================
+    // PAGE LOADED
+    // ==========================================
+
     private async void CustomerManagementPage_Loaded(
         object sender,
         RoutedEventArgs e)
     {
         await LoadCustomersAsync();
     }
+
+
+    // ==========================================
+    // LOAD CUSTOMERS
+    // ==========================================
 
     private async Task LoadCustomersAsync()
     {
@@ -36,8 +54,13 @@ public sealed partial class CustomerManagementPage : Page
             _customers =
                 await _customerService.GetAllAsync();
 
-            CustomerList.ItemsSource =
-                _customers;
+            // Newest first — CustomerId is an IDENTITY column.
+            _customers =
+                _customers
+                    .OrderByDescending(c => c.CustomerId)
+                    .ToList();
+
+            ApplyFilter();
         }
         catch (Exception ex)
         {
@@ -47,6 +70,115 @@ public sealed partial class CustomerManagementPage : Page
         }
     }
 
+
+    // ==========================================
+    // SEARCH + PAGINATION
+    // ==========================================
+
+    private void ApplyFilter()
+    {
+        var search =
+            SearchBox.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            _filteredCustomers = _customers;
+        }
+        else
+        {
+            _filteredCustomers =
+                _customers
+                    .Where(c =>
+                        c.FirstName.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        c.LastName.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        (c.Phone?.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+                            ?? false))
+                    .ToList();
+        }
+
+        _currentPage = 1;
+
+        UpdatePagination();
+    }
+
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredCustomers.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedCustomers =
+            _filteredCustomers
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        CustomerList.ItemsSource = pagedCustomers;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_filteredCustomers.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredCustomers.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
+    }
+
+
+    // ==========================================
+    // SELECTION
+    // ==========================================
+
     private void CustomerList_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -54,6 +186,11 @@ public sealed partial class CustomerManagementPage : Page
         _selectedCustomer =
             CustomerList.SelectedItem as Customer;
     }
+
+
+    // ==========================================
+    // NEW CUSTOMER
+    // ==========================================
 
     private async void NewCustomerButton_Click(
         object sender,
@@ -155,11 +292,30 @@ public sealed partial class CustomerManagementPage : Page
         }
     }
 
+
+    // ==========================================
+    // EDIT CUSTOMER
+    // ==========================================
+
     private async void EditCustomerButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (_selectedCustomer == null)
+        // Prefer the button's Tag (row-level button),
+        // otherwise fall back to the ListView selection.
+        Customer? customer = null;
+
+        if (sender is Button button &&
+            button.Tag is Customer tagCustomer)
+        {
+            customer = tagCustomer;
+        }
+        else
+        {
+            customer = _selectedCustomer;
+        }
+
+        if (customer == null)
         {
             await ShowMessageAsync(
                 "Edit Customer",
@@ -168,34 +324,36 @@ public sealed partial class CustomerManagementPage : Page
             return;
         }
 
+        _selectedCustomer = customer;
+
         var firstNameBox = new TextBox
         {
             Header = "First Name",
-            Text = _selectedCustomer.FirstName
+            Text = customer.FirstName
         };
 
         var lastNameBox = new TextBox
         {
             Header = "Last Name",
-            Text = _selectedCustomer.LastName
+            Text = customer.LastName
         };
 
         var phoneBox = new TextBox
         {
             Header = "Phone",
-            Text = _selectedCustomer.Phone ?? string.Empty
+            Text = customer.Phone ?? string.Empty
         };
 
         var emailBox = new TextBox
         {
             Header = "Email",
-            Text = _selectedCustomer.Email ?? string.Empty
+            Text = customer.Email ?? string.Empty
         };
 
         var addressBox = new TextBox
         {
             Header = "Address",
-            Text = _selectedCustomer.Address ?? string.Empty
+            Text = customer.Address ?? string.Empty
         };
 
         var content = new StackPanel
@@ -236,31 +394,30 @@ public sealed partial class CustomerManagementPage : Page
             return;
         }
 
-        _selectedCustomer.FirstName =
+        customer.FirstName =
             firstNameBox.Text.Trim();
 
-        _selectedCustomer.LastName =
+        customer.LastName =
             lastNameBox.Text.Trim();
 
-        _selectedCustomer.Phone =
+        customer.Phone =
             string.IsNullOrWhiteSpace(phoneBox.Text)
                 ? null
                 : phoneBox.Text.Trim();
 
-        _selectedCustomer.Email =
+        customer.Email =
             string.IsNullOrWhiteSpace(emailBox.Text)
                 ? null
                 : emailBox.Text.Trim();
 
-        _selectedCustomer.Address =
+        customer.Address =
             string.IsNullOrWhiteSpace(addressBox.Text)
                 ? null
                 : addressBox.Text.Trim();
 
         try
         {
-            await _customerService.UpdateAsync(
-                _selectedCustomer);
+            await _customerService.UpdateAsync(customer);
 
             await LoadCustomersAsync();
 
@@ -276,11 +433,30 @@ public sealed partial class CustomerManagementPage : Page
         }
     }
 
+
+    // ==========================================
+    // DELETE CUSTOMER
+    // ==========================================
+
     private async void DeleteCustomerButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (_selectedCustomer == null)
+        // Prefer the button's Tag (row-level button),
+        // otherwise fall back to the ListView selection.
+        Customer? customer = null;
+
+        if (sender is Button button &&
+            button.Tag is Customer tagCustomer)
+        {
+            customer = tagCustomer;
+        }
+        else
+        {
+            customer = _selectedCustomer;
+        }
+
+        if (customer == null)
         {
             await ShowMessageAsync(
                 "Delete Customer",
@@ -293,8 +469,8 @@ public sealed partial class CustomerManagementPage : Page
         {
             Title = "Delete Customer",
             Content =
-                $"Delete {_selectedCustomer.FirstName} " +
-                $"{_selectedCustomer.LastName}?",
+                $"Delete {customer.FirstName} " +
+                $"{customer.LastName}?",
             PrimaryButtonText = "Delete",
             CloseButtonText = "Cancel",
             XamlRoot = XamlRoot
@@ -309,7 +485,7 @@ public sealed partial class CustomerManagementPage : Page
         try
         {
             await _customerService.DeleteAsync(
-                _selectedCustomer.CustomerId);
+                customer.CustomerId);
 
             _selectedCustomer = null;
 
@@ -323,38 +499,22 @@ public sealed partial class CustomerManagementPage : Page
         }
     }
 
+
+    // ==========================================
+    // SEARCH
+    // ==========================================
+
     private void SearchBox_TextChanged(
         object sender,
         TextChangedEventArgs e)
     {
-        var search =
-            SearchBox.Text.Trim();
-
-        if (string.IsNullOrWhiteSpace(search))
-        {
-            CustomerList.ItemsSource =
-                _customers;
-
-            return;
-        }
-
-        CustomerList.ItemsSource =
-            _customers
-                .Where(c =>
-                    c.FirstName.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
-                    ||
-                    c.LastName.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
-                    ||
-                    (c.Phone?.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
-                        ?? false))
-                .ToList();
+        ApplyFilter();
     }
+
+
+    // ==========================================
+    // MESSAGE
+    // ==========================================
 
     private async Task ShowMessageAsync(
         string title,

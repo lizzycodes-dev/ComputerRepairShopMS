@@ -16,6 +16,10 @@ public sealed partial class AttendanceManagementPage : Page
     private readonly MasterErpDbContext _masterDb;
     private readonly CurrentBranchContext _currentBranchContext;
 
+    private List<AttendanceRow> _filteredRecords = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
     private List<AttendanceRow> _attendanceRecords = new();
 
     private Attendance? _selectedAttendance;
@@ -161,6 +165,7 @@ public sealed partial class AttendanceManagementPage : Page
                 await query
                     .OrderByDescending(x => x.AttendanceDate)
                     .ThenByDescending(x => x.TimeIn)
+                    .ThenByDescending(x => x.AttendanceId)
                     .ToListAsync();
 
             _attendanceRecords =
@@ -206,24 +211,91 @@ public sealed partial class AttendanceManagementPage : Page
 
         if (string.IsNullOrWhiteSpace(searchText))
         {
-            AttendanceListView.ItemsSource =
-                _attendanceRecords;
-
-            return;
+            _filteredRecords = _attendanceRecords;
+        }
+        else
+        {
+            _filteredRecords =
+                _attendanceRecords
+                    .Where(x =>
+                        x.EmployeeName
+                            .ToLower()
+                            .Contains(searchText))
+                    .ToList();
         }
 
-        var filtered =
-            _attendanceRecords
-                .Where(x =>
-                    x.EmployeeName
-                        .ToLower()
-                        .Contains(searchText))
-                .ToList();
+        _currentPage = 1;
 
-        AttendanceListView.ItemsSource =
-            filtered;
+        UpdatePagination();
     }
 
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredRecords.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedRecords =
+            _filteredRecords
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        AttendanceListView.ItemsSource = pagedRecords;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_filteredRecords.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredRecords.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
+    }
 
     // ==========================================
     // SELECTION

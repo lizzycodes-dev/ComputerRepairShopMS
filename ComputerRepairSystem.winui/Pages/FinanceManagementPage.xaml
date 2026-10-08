@@ -59,6 +59,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
 
@@ -82,9 +83,23 @@
 
                         <Button
                             Grid.Column="1"
-                            Content="Add Invoice"
                             VerticalAlignment="Bottom"
-                            Click="AddInvoiceButton_Click"/>
+                            Click="AddInvoiceButton_Click">
+
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+
+                                <SymbolIcon Symbol="Add"/>
+
+                                <TextBlock
+                                    Text="Add Invoice"
+                                    VerticalAlignment="Center"/>
+
+                            </StackPanel>
+
+                        </Button>
 
                     </Grid>
 
@@ -94,83 +109,19 @@
                     <Border
                         Grid.Row="1"
                         BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="12">
+                        CornerRadius="8">
 
                         <ListView
-                            x:Name="InvoiceList">
+                            x:Name="InvoiceList"
+                            SelectionMode="None">
 
                             <ListView.Header>
 
-                                <Grid Padding="8">
+                                <Border
+                                    BorderThickness="0,0,0,1"
+                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="60"/>
-                                        <ColumnDefinition Width="1.5*"/>
-                                        <ColumnDefinition Width="2*"/>
-                                        <ColumnDefinition Width="1.3*"/>
-                                        <ColumnDefinition Width="1.3*"/>
-                                        <ColumnDefinition Width="1.3*"/>
-                                        <ColumnDefinition Width="1.4*"/>
-                                        <ColumnDefinition Width="1.2*"/>
-                                        <ColumnDefinition Width="1.5*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBlock
-                                        Grid.Column="0"
-                                        Text="ID"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        Text="Invoice No."
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        Text="Customer"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="3"
-                                        Text="Subtotal"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="4"
-                                        Text="Discount"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="5"
-                                        Text="Tax"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="6"
-                                        Text="Total"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="7"
-                                        Text="Status"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="8"
-                                        Text="Action"
-                                        FontWeight="SemiBold"/>
-
-                                </Grid>
-
-                            </ListView.Header>
-
-
-                            <ListView.ItemTemplate>
-
-                                <DataTemplate>
-
-                                    <Grid Padding="8">
+                                    <Grid Padding="16,12">
 
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="60"/>
@@ -184,66 +135,75 @@
                                             <ColumnDefinition Width="1.5*"/>
                                         </Grid.ColumnDefinitions>
 
-
-                                        <TextBlock
-                                            Grid.Column="0"
-                                            Text="{Binding InvoiceId}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            Text="{Binding InvoiceNumberText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Text="{Binding CustomerName}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="3"
-                                            Text="{Binding SubtotalText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="4"
-                                            Text="{Binding DiscountText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="5"
-                                            Text="{Binding TaxText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="6"
-                                            Text="{Binding TotalAmountText}"
-                                            VerticalAlignment="Center"
-                                            FontWeight="SemiBold"/>
-
-                                        <TextBlock
-                                            Grid.Column="7"
-                                            Text="{Binding StatusText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <StackPanel
-                                            Grid.Column="8"
-                                            Orientation="Horizontal"
-                                            Spacing="8">
-
-                                            <Button
-                                                Content="Edit"
-                                                Tag="{Binding}"
-                                                Click="EditInvoiceButton_Click"/>
-
-                                            <Button
-                                                Content="Delete"
-                                                Tag="{Binding}"
-                                                Click="DeleteInvoiceButton_Click"/>
-
-                                        </StackPanel>
+                                        <TextBlock Grid.Column="0" Text="ID" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="Invoice No." FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="2" Text="Customer" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="3" Text="Subtotal" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="4" Text="Discount" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="5" Text="Tax" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="6" Text="Total" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="7" Text="Status" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="8" Text="Action" FontWeight="SemiBold"/>
 
                                     </Grid>
+
+                                </Border>
+
+                            </ListView.Header>
+
+
+                            <ListView.ItemTemplate>
+
+                                <DataTemplate>
+
+                                    <Border
+                                        BorderThickness="0,0,0,1"
+                                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
+
+                                        <Grid Padding="16,12">
+
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="1.3*"/>
+                                                <ColumnDefinition Width="1.3*"/>
+                                                <ColumnDefinition Width="1.3*"/>
+                                                <ColumnDefinition Width="1.4*"/>
+                                                <ColumnDefinition Width="1.2*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding InvoiceId}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding InvoiceNumberText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding CustomerName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding SubtotalText}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding DiscountText}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding TaxText}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="6" Text="{Binding TotalAmountText}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="7" Text="{Binding StatusText}" VerticalAlignment="Center"/>
+
+                                            <StackPanel Grid.Column="8" Orientation="Horizontal" Spacing="8">
+
+                                                <Button Tag="{Binding}" Click="EditInvoiceButton_Click">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <SymbolIcon Symbol="Edit"/>
+                                                        <TextBlock Text="Edit" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Tag="{Binding}" Click="DeleteInvoiceButton_Click">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <SymbolIcon Symbol="Delete"/>
+                                                        <TextBlock Text="Delete" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                            </StackPanel>
+
+                                        </Grid>
+
+                                    </Border>
 
                                 </DataTemplate>
 
@@ -252,6 +212,33 @@
                         </ListView>
 
                     </Border>
+
+
+                    <!-- PAGINATION -->
+
+                    <StackPanel
+                        Grid.Row="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="12">
+
+                        <Button x:Name="PreviousInvoicePageButton" Click="PreviousInvoicePageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <SymbolIcon Symbol="Back"/>
+                                <TextBlock Text="Previous" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock x:Name="InvoicePageInfoText" VerticalAlignment="Center"/>
+
+                        <Button x:Name="NextInvoicePageButton" Click="NextInvoicePageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="Next" VerticalAlignment="Center"/>
+                                <SymbolIcon Symbol="Forward"/>
+                            </StackPanel>
+                        </Button>
+
+                    </StackPanel>
 
                 </Grid>
 
@@ -273,6 +260,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
 
@@ -296,9 +284,23 @@
 
                         <Button
                             Grid.Column="1"
-                            Content="Add Payment"
                             VerticalAlignment="Bottom"
-                            Click="AddPaymentButton_Click"/>
+                            Click="AddPaymentButton_Click">
+
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+
+                                <SymbolIcon Symbol="Add"/>
+
+                                <TextBlock
+                                    Text="Add Payment"
+                                    VerticalAlignment="Center"/>
+
+                            </StackPanel>
+
+                        </Button>
 
                     </Grid>
 
@@ -308,77 +310,19 @@
                     <Border
                         Grid.Row="1"
                         BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="12">
+                        CornerRadius="8">
 
                         <ListView
-                            x:Name="PaymentList">
+                            x:Name="PaymentList"
+                            SelectionMode="None">
 
                             <ListView.Header>
 
-                                <Grid Padding="8">
+                                <Border
+                                    BorderThickness="0,0,0,1"
+                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="60"/>
-                                        <ColumnDefinition Width="1.4*"/>
-                                        <ColumnDefinition Width="1.5*"/>
-                                        <ColumnDefinition Width="1.3*"/>
-                                        <ColumnDefinition Width="1.4*"/>
-                                        <ColumnDefinition Width="1.5*"/>
-                                        <ColumnDefinition Width="1.2*"/>
-                                        <ColumnDefinition Width="1.5*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBlock
-                                        Grid.Column="0"
-                                        Text="ID"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        Text="Invoice"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        Text="Amount"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="3"
-                                        Text="Method"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="4"
-                                        Text="Reference No."
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="5"
-                                        Text="Status"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="6"
-                                        Text="Date"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="7"
-                                        Text="Action"
-                                        FontWeight="SemiBold"/>
-
-                                </Grid>
-
-                            </ListView.Header>
-
-
-                            <ListView.ItemTemplate>
-
-                                <DataTemplate>
-
-                                    <Grid Padding="8">
+                                    <Grid Padding="16,12">
 
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="60"/>
@@ -391,59 +335,72 @@
                                             <ColumnDefinition Width="1.5*"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock
-                                            Grid.Column="0"
-                                            Text="{Binding PaymentId}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            Text="{Binding InvoiceNumber}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Text="{Binding AmountText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="3"
-                                            Text="{Binding PaymentMethodText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="4"
-                                            Text="{Binding ReferenceNumberText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="5"
-                                            Text="{Binding StatusText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="6"
-                                            Text="{Binding PaidAtText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <StackPanel
-                                            Grid.Column="7"
-                                            Orientation="Horizontal"
-                                            Spacing="8">
-
-                                            <Button
-                                                Content="Edit"
-                                                Tag="{Binding}"
-                                                Click="EditPaymentButton_Click"/>
-
-                                            <Button
-                                                Content="Delete"
-                                                Tag="{Binding}"
-                                                Click="DeletePaymentButton_Click"/>
-
-                                        </StackPanel>
+                                        <TextBlock Grid.Column="0" Text="ID" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="Invoice" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="2" Text="Amount" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="3" Text="Method" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="4" Text="Reference No." FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="5" Text="Status" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="6" Text="Date" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="7" Text="Action" FontWeight="SemiBold"/>
 
                                     </Grid>
+
+                                </Border>
+
+                            </ListView.Header>
+
+
+                            <ListView.ItemTemplate>
+
+                                <DataTemplate>
+
+                                    <Border
+                                        BorderThickness="0,0,0,1"
+                                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
+
+                                        <Grid Padding="16,12">
+
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="1.4*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="1.3*"/>
+                                                <ColumnDefinition Width="1.4*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="1.2*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding PaymentId}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding InvoiceNumber}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding AmountText}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding PaymentMethodText}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding ReferenceNumberText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding StatusText}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="6" Text="{Binding PaidAtText}" VerticalAlignment="Center"/>
+
+                                            <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="8">
+
+                                                <Button Tag="{Binding}" Click="EditPaymentButton_Click">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <SymbolIcon Symbol="Edit"/>
+                                                        <TextBlock Text="Edit" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Tag="{Binding}" Click="DeletePaymentButton_Click">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <SymbolIcon Symbol="Delete"/>
+                                                        <TextBlock Text="Delete" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                            </StackPanel>
+
+                                        </Grid>
+
+                                    </Border>
 
                                 </DataTemplate>
 
@@ -452,6 +409,33 @@
                         </ListView>
 
                     </Border>
+
+
+                    <!-- PAGINATION -->
+
+                    <StackPanel
+                        Grid.Row="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="12">
+
+                        <Button x:Name="PreviousPaymentPageButton" Click="PreviousPaymentPageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <SymbolIcon Symbol="Back"/>
+                                <TextBlock Text="Previous" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock x:Name="PaymentPageInfoText" VerticalAlignment="Center"/>
+
+                        <Button x:Name="NextPaymentPageButton" Click="NextPaymentPageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="Next" VerticalAlignment="Center"/>
+                                <SymbolIcon Symbol="Forward"/>
+                            </StackPanel>
+                        </Button>
+
+                    </StackPanel>
 
                 </Grid>
 
@@ -473,6 +457,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
 
@@ -496,9 +481,23 @@
 
                         <Button
                             Grid.Column="1"
-                            Content="Add Expense"
                             VerticalAlignment="Bottom"
-                            Click="AddExpenseButton_Click"/>
+                            Click="AddExpenseButton_Click">
+
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+
+                                <SymbolIcon Symbol="Add"/>
+
+                                <TextBlock
+                                    Text="Add Expense"
+                                    VerticalAlignment="Center"/>
+
+                            </StackPanel>
+
+                        </Button>
 
                     </Grid>
 
@@ -508,71 +507,19 @@
                     <Border
                         Grid.Row="1"
                         BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="12">
+                        CornerRadius="8">
 
                         <ListView
-                            x:Name="ExpenseList">
+                            x:Name="ExpenseList"
+                            SelectionMode="None">
 
                             <ListView.Header>
 
-                                <Grid Padding="8">
+                                <Border
+                                    BorderThickness="0,0,0,1"
+                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="60"/>
-                                        <ColumnDefinition Width="1.4*"/>
-                                        <ColumnDefinition Width="1.5*"/>
-                                        <ColumnDefinition Width="1.6*"/>
-                                        <ColumnDefinition Width="2.5*"/>
-                                        <ColumnDefinition Width="1.5*"/>
-                                        <ColumnDefinition Width="1.5*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBlock
-                                        Grid.Column="0"
-                                        Text="ID"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        Text="Branch"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        Text="Category"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="3"
-                                        Text="Amount"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="4"
-                                        Text="Description"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="5"
-                                        Text="Date"
-                                        FontWeight="SemiBold"/>
-
-                                    <TextBlock
-                                        Grid.Column="6"
-                                        Text="Action"
-                                        FontWeight="SemiBold"/>
-
-                                </Grid>
-
-                            </ListView.Header>
-
-
-                            <ListView.ItemTemplate>
-
-                                <DataTemplate>
-
-                                    <Grid Padding="8">
+                                    <Grid Padding="16,12">
 
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="60"/>
@@ -584,56 +531,69 @@
                                             <ColumnDefinition Width="1.5*"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock
-                                            Grid.Column="0"
-                                            Text="{Binding ExpenseId}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            Text="{Binding BranchName}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Text="{Binding CategoryText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="3"
-                                            Text="{Binding AmountText}"
-                                            VerticalAlignment="Center"
-                                            FontWeight="SemiBold"/>
-
-                                        <TextBlock
-                                            Grid.Column="4"
-                                            Text="{Binding DescriptionText}"
-                                            TextWrapping="Wrap"
-                                            VerticalAlignment="Center"/>
-
-                                        <TextBlock
-                                            Grid.Column="5"
-                                            Text="{Binding ExpenseDateText}"
-                                            VerticalAlignment="Center"/>
-
-                                        <StackPanel
-                                            Grid.Column="6"
-                                            Orientation="Horizontal"
-                                            Spacing="8">
-
-                                            <Button
-                                                Content="Edit"
-                                                Tag="{Binding}"
-                                                Click="EditExpenseButton_Click"/>
-
-                                            <Button
-                                                Content="Delete"
-                                                Tag="{Binding}"
-                                                Click="DeleteExpenseButton_Click"/>
-
-                                        </StackPanel>
+                                        <TextBlock Grid.Column="0" Text="ID" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="Branch" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="2" Text="Category" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="3" Text="Amount" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="4" Text="Description" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="5" Text="Date" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="6" Text="Action" FontWeight="SemiBold"/>
 
                                     </Grid>
+
+                                </Border>
+
+                            </ListView.Header>
+
+
+                            <ListView.ItemTemplate>
+
+                                <DataTemplate>
+
+                                    <Border
+                                        BorderThickness="0,0,0,1"
+                                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
+
+                                        <Grid Padding="16,12">
+
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="1.4*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="1.6*"/>
+                                                <ColumnDefinition Width="2.5*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding ExpenseId}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding BranchName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding CategoryText}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding AmountText}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding DescriptionText}" VerticalAlignment="Center" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding ExpenseDateText}" VerticalAlignment="Center"/>
+
+                                            <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8">
+
+                                                <Button Tag="{Binding}" Click="EditExpenseButton_Click">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <SymbolIcon Symbol="Edit"/>
+                                                        <TextBlock Text="Edit" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Tag="{Binding}" Click="DeleteExpenseButton_Click">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <SymbolIcon Symbol="Delete"/>
+                                                        <TextBlock Text="Delete" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                            </StackPanel>
+
+                                        </Grid>
+
+                                    </Border>
 
                                 </DataTemplate>
 
@@ -643,9 +603,38 @@
 
                     </Border>
 
+
+                    <!-- PAGINATION -->
+
+                    <StackPanel
+                        Grid.Row="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="12">
+
+                        <Button x:Name="PreviousExpensePageButton" Click="PreviousExpensePageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <SymbolIcon Symbol="Back"/>
+                                <TextBlock Text="Previous" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock x:Name="ExpensePageInfoText" VerticalAlignment="Center"/>
+
+                        <Button x:Name="NextExpensePageButton" Click="NextExpensePageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="Next" VerticalAlignment="Center"/>
+                                <SymbolIcon Symbol="Forward"/>
+                            </StackPanel>
+                        </Button>
+
+                    </StackPanel>
+
                 </Grid>
 
             </TabViewItem>
+
+
             <!-- ================================== -->
             <!-- FINANCIAL REPORTS -->
             <!-- ================================== -->

@@ -11,14 +11,18 @@ namespace ComputerRepairSystem_winui.Pages;
 
 public sealed partial class BillingPage : Page
 {
-    private readonly TenantDbContextFactory
-        _tenantDbFactory;
+    private readonly TenantDbContextFactory _tenantDbFactory;
+    private readonly MasterErpDbContext _masterDb;
+    private readonly CurrentBranchContext _currentBranchContext;
 
-    private readonly MasterErpDbContext
-        _masterDb;
+    // ==========================================
+    // PAGINATION STATE
+    // ==========================================
 
-    private readonly CurrentBranchContext
-        _currentBranchContext;
+    private List<BillingRow> _billingRows = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
 
     public BillingPage(
         TenantDbContextFactory tenantDbFactory,
@@ -27,20 +31,12 @@ public sealed partial class BillingPage : Page
     {
         InitializeComponent();
 
-        _tenantDbFactory =
-            tenantDbFactory;
+        _tenantDbFactory = tenantDbFactory;
+        _masterDb = masterDb;
+        _currentBranchContext = currentBranchContext;
 
-        _masterDb =
-            masterDb;
-
-        _currentBranchContext =
-            currentBranchContext;
-
-        Loaded +=
-            BillingPage_Loaded;
-
-        Unloaded +=
-            BillingPage_Unloaded;
+        Loaded += BillingPage_Loaded;
+        Unloaded += BillingPage_Unloaded;
     }
 
 
@@ -76,8 +72,7 @@ public sealed partial class BillingPage : Page
         object sender,
         RoutedEventArgs e)
     {
-        _currentBranchContext.BranchChanged +=
-            OnGlobalBranchChanged;
+        _currentBranchContext.BranchChanged += OnGlobalBranchChanged;
 
         await LoadCompletedRepairsAsync();
     }
@@ -87,8 +82,7 @@ public sealed partial class BillingPage : Page
         object sender,
         RoutedEventArgs e)
     {
-        _currentBranchContext.BranchChanged -=
-            OnGlobalBranchChanged;
+        _currentBranchContext.BranchChanged -= OnGlobalBranchChanged;
     }
 
 
@@ -101,11 +95,16 @@ public sealed partial class BillingPage : Page
     }
 
 
+    // ==========================================
+    // LOAD COMPLETED REPAIRS
+    // ==========================================
+
     private async Task LoadCompletedRepairsAsync()
     {
         if (CurrentUser.CompanyId == null)
         {
-            BillingList.ItemsSource = null;
+            _billingRows = new();
+            UpdatePagination();
             return;
         }
 
@@ -139,7 +138,8 @@ public sealed partial class BillingPage : Page
 
                 if (currentBranchId == null)
                 {
-                    BillingList.ItemsSource = null;
+                    _billingRows = new();
+                    UpdatePagination();
 
                     await ShowMessageAsync(
                         "Branch Not Selected",
@@ -153,12 +153,13 @@ public sealed partial class BillingPage : Page
                     currentBranchId.Value);
             }
 
-            var repairs =
+            // Newest first — RepairId is an IDENTITY column
+            _billingRows =
                 await query
+                    .OrderByDescending(r => r.RepairId)
                     .Select(r => new BillingRow
                     {
-                        RepairId =
-                            r.RepairId,
+                        RepairId = r.RepairId,
 
                         CustomerName =
                             r.ServiceRequest
@@ -186,18 +187,93 @@ public sealed partial class BillingPage : Page
                     })
                     .ToListAsync();
 
-            BillingList.ItemsSource =
-                repairs;
+            _currentPage = 1;
+
+            UpdatePagination();
         }
         catch (Exception ex)
         {
-            BillingList.ItemsSource = null;
+            _billingRows = new();
+            UpdatePagination();
 
             System.Diagnostics.Debug.WriteLine(
                 "Failed to load completed repairs: " + ex);
         }
     }
 
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_billingRows.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedRows =
+            _billingRows
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        BillingList.ItemsSource = pagedRows;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_billingRows.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_billingRows.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
+    }
+
+
+    // ==========================================
+    // PAY BUTTON
+    // ==========================================
 
     private async void PayButton_Click(
         object sender,
@@ -209,10 +285,13 @@ public sealed partial class BillingPage : Page
             return;
         }
 
-        await ProcessPaymentAsync(
-            row.RepairId);
+        await ProcessPaymentAsync(row.RepairId);
     }
 
+
+    // ==========================================
+    // PROCESS PAYMENT
+    // ==========================================
 
     private async Task ProcessPaymentAsync(
         int repairId)
@@ -453,28 +532,22 @@ public sealed partial class BillingPage : Page
         var invoice =
             new Invoice
             {
-                RepairId =
-                    repairId,
+                RepairId = repairId,
 
                 InvoiceNumber =
                     $"INV-{DateTime.UtcNow:yyyyMMddHHmmssfff}",
 
-                Subtotal =
-                    subtotal,
+                Subtotal = subtotal,
 
                 LaborAmount = laborAmount,
 
-                Discount =
-                    0,
+                Discount = 0,
 
-                Tax =
-                    0,
+                Tax = 0,
 
-                TotalAmount =
-                    total,
+                TotalAmount = total,
 
-                Status =
-                    "Paid",
+                Status = "Paid",
 
                 Payments =
                     new List<Payment>

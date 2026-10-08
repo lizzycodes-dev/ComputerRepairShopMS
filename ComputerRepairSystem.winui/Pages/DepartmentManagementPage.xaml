@@ -14,6 +14,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
@@ -42,6 +43,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBox
@@ -53,22 +55,44 @@
             <Button
                 x:Name="AddDepartmentButton"
                 Grid.Column="1"
-                Content="Add Department"
-                Click="AddDepartmentButton_Click"/>
+                Click="AddDepartmentButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Add"/>
+                    <TextBlock Text="Add Department" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
             <Button
                 x:Name="EditDepartmentButton"
                 Grid.Column="2"
-                Content="Edit"
                 IsEnabled="False"
-                Click="EditDepartmentButton_Click"/>
+                Click="EditDepartmentButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Edit"/>
+                    <TextBlock Text="Edit" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
             <Button
                 x:Name="DeleteDepartmentButton"
                 Grid.Column="3"
-                Content="Delete"
                 IsEnabled="False"
-                Click="DeleteDepartmentButton_Click"/>
+                Click="DeleteDepartmentButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Delete"/>
+                    <TextBlock Text="Delete" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <Button
+                x:Name="RefreshDepartmentButton"
+                Grid.Column="4"
+                Click="RefreshDepartmentButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Refresh"/>
+                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
         </Grid>
 
@@ -76,8 +100,7 @@
         <Border
             Grid.Row="2"
             BorderThickness="1"
-            CornerRadius="8"
-            Padding="12">
+            CornerRadius="8">
 
             <Grid>
 
@@ -87,33 +110,39 @@
                 </Grid.RowDefinitions>
 
                 <!-- COLUMN HEADERS -->
-                <Grid
+                <Border
                     Grid.Row="0"
-                    Padding="12"
-                    ColumnSpacing="12">
+                    BorderThickness="0,0,0,1"
+                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="220"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="100"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid
+                        Padding="16,12"
+                        ColumnSpacing="12">
 
-                    <TextBlock
-                        Grid.Column="0"
-                        Text="Department Name"
-                        FontWeight="SemiBold"/>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="100"/>
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock
-                        Grid.Column="1"
-                        Text="Description"
-                        FontWeight="SemiBold"/>
+                        <TextBlock
+                            Grid.Column="0"
+                            Text="Department Name"
+                            FontWeight="SemiBold"/>
 
-                    <TextBlock
-                        Grid.Column="2"
-                        Text="Status"
-                        FontWeight="SemiBold"/>
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="Description"
+                            FontWeight="SemiBold"/>
 
-                </Grid>
+                        <TextBlock
+                            Grid.Column="2"
+                            Text="Status"
+                            FontWeight="SemiBold"/>
+
+                    </Grid>
+
+                </Border>
 
                 <!-- DEPARTMENTS -->
                 <ListView
@@ -126,31 +155,40 @@
 
                         <DataTemplate>
 
-                            <Grid
-                                Padding="12"
-                                ColumnSpacing="12">
+                            <Border
+                                BorderThickness="0,0,0,1"
+                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="220"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="100"/>
-                                </Grid.ColumnDefinitions>
+                                <Grid
+                                    Padding="16,12"
+                                    ColumnSpacing="12">
 
-                                <TextBlock
-                                    Grid.Column="0"
-                                    Text="{Binding DepartmentName}"
-                                    TextTrimming="CharacterEllipsis"/>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <TextBlock
-                                    Grid.Column="1"
-                                    Text="{Binding Description}"
-                                    TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="{Binding DepartmentName}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock
-                                    Grid.Column="2"
-                                    Text="{Binding Status}"/>
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Text="{Binding Description}"
+                                        VerticalAlignment="Center"
+                                        TextTrimming="CharacterEllipsis"/>
 
-                            </Grid>
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Text="{Binding Status}"
+                                        VerticalAlignment="Center"/>
+
+                                </Grid>
+
+                            </Border>
 
                         </DataTemplate>
 
@@ -161,6 +199,37 @@
             </Grid>
 
         </Border>
+
+        <!-- PAGINATION -->
+        <StackPanel
+            Grid.Row="3"
+            Orientation="Horizontal"
+            HorizontalAlignment="Center"
+            Spacing="12">
+
+            <Button
+                x:Name="PreviousPageButton"
+                Click="PreviousPageButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Back"/>
+                    <TextBlock Text="Previous" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <TextBlock
+                x:Name="PageInfoText"
+                VerticalAlignment="Center"/>
+
+            <Button
+                x:Name="NextPageButton"
+                Click="NextPageButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="Next" VerticalAlignment="Center"/>
+                    <SymbolIcon Symbol="Forward"/>
+                </StackPanel>
+            </Button>
+
+        </StackPanel>
 
     </Grid>
 

@@ -16,6 +16,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
 
@@ -37,135 +38,200 @@
         <!-- ACTION BAR -->
 
         <StackPanel
-    Grid.Row="1"
-    Orientation="Horizontal"
-    Spacing="12">
+            Grid.Row="1"
+            Orientation="Horizontal"
+            Spacing="12">
+
+            <Button Click="AddUserButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Add"/>
+                    <TextBlock Text="Add User" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
             <Button
-        Content="Add User"
-        Click="AddUserButton_Click" />
+                x:Name="EditUserButton"
+                Click="EditUserButton_Click"
+                IsEnabled="False">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Edit"/>
+                    <TextBlock Text="Edit User" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
             <Button
-        x:Name="EditUserButton"
-        Content="Edit User"
-        Click="EditUserButton_Click"
-        IsEnabled="False" />
+                x:Name="DeleteUserButton"
+                Click="DeleteUserButton_Click"
+                IsEnabled="False">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Delete"/>
+                    <TextBlock Text="Delete User" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
-            <Button
-        x:Name="DeleteUserButton"
-        Content="Delete User"
-        Click="DeleteUserButton_Click"
-        IsEnabled="False" />
-
-            <Button
-        Content="Refresh"
-        Click="RefreshButton_Click" />
+            <Button Click="RefreshButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Refresh"/>
+                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
 
         </StackPanel>
 
 
         <!-- USER LIST -->
 
-        <ListView
-    x:Name="UsersListView"
-    Grid.Row="2"
-    SelectionMode="Single"
-    SelectionChanged="UsersListView_SelectionChanged">
+        <Border
+            Grid.Row="2"
+            BorderThickness="1"
+            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+            CornerRadius="8">
 
-            <ListView.Header>
+            <ListView
+                x:Name="UsersListView"
+                SelectionMode="Single"
+                SelectionChanged="UsersListView_SelectionChanged">
 
-                <Grid Padding="8">
+                <ListView.Header>
 
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+                    <Border
+                        BorderThickness="0,0,0,1"
+                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                    <TextBlock
-                Grid.Column="0"
-                Text="Username"
-                FontWeight="SemiBold" />
+                        <Grid Padding="16,12">
 
-                    <TextBlock
-                Grid.Column="1"
-                Text="Email"
-                FontWeight="SemiBold" />
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="1.2*" />
+                                <ColumnDefinition Width="1.5*" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
 
-                    <TextBlock
-                Grid.Column="2"
-                Text="Role"
-                FontWeight="SemiBold" />
+                            <TextBlock
+                                Grid.Column="0"
+                                Text="Username"
+                                FontWeight="SemiBold" />
 
-                    <TextBlock
-                Grid.Column="3"
-                Text="Company Name"
-                FontWeight="SemiBold" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="Email"
+                                FontWeight="SemiBold" />
 
-                    <TextBlock
-                Grid.Column="4"
-                Text="Status"
-                FontWeight="SemiBold" />
+                            <TextBlock
+                                Grid.Column="2"
+                                Text="Role"
+                                FontWeight="SemiBold" />
 
-                </Grid>
+                            <TextBlock
+                                Grid.Column="3"
+                                Text="Company Name"
+                                FontWeight="SemiBold" />
 
-            </ListView.Header>
+                            <TextBlock
+                                Grid.Column="4"
+                                Text="Status"
+                                FontWeight="SemiBold" />
 
+                        </Grid>
 
-            <ListView.ItemTemplate>
+                    </Border>
 
-                <DataTemplate>
-
-                    <Grid Padding="8">
-
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*" />
-                            <ColumnDefinition Width="2*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                </ListView.Header>
 
 
-                        <!-- Username -->
+                <ListView.ItemTemplate>
 
-                        <TextBlock
-                    Grid.Column="0"
-                    Text="{Binding UserName}" />
+                    <DataTemplate>
 
+                        <Border
+                            BorderThickness="0,0,0,1"
+                            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
 
-                        <!-- Email -->
+                            <Grid Padding="16,12">
 
-                        <TextBlock
-                    Grid.Column="1"
-                    Text="{Binding Email}" />
-
-                        <!-- Role -->
-                    <TextBlock Grid.Column="2"
-                        Text="{Binding Role}"
-                        VerticalAlignment="Center" />
-
-                        <!-- Company -->
-                    <TextBlock
-                        Grid.Column="3"
-                        Text="{Binding CompanyName}" />
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="1.2*" />
+                                    <ColumnDefinition Width="1.5*" />
+                                    <ColumnDefinition Width="1*" />
+                                </Grid.ColumnDefinitions>
 
 
-                        <!-- Status -->
+                                <TextBlock
+                                    Grid.Column="0"
+                                    Text="{Binding User.UserName}"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis" />
 
-                        <TextBlock
-                    Grid.Column="4"
-                    Text="{Binding IsActive}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="{Binding User.Email}"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis" />
 
-                    </Grid>
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="{Binding Role}"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis" />
 
-                </DataTemplate>
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="{Binding CompanyName}"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis" />
 
-            </ListView.ItemTemplate>
+                                <TextBlock
+                                    Grid.Column="4"
+                                    Text="{Binding StatusText}"
+                                    VerticalAlignment="Center" />
 
-        </ListView>
+                            </Grid>
+
+                        </Border>
+
+                    </DataTemplate>
+
+                </ListView.ItemTemplate>
+
+            </ListView>
+
+        </Border>
+
+
+        <!-- PAGINATION -->
+
+        <StackPanel
+            Grid.Row="3"
+            Orientation="Horizontal"
+            HorizontalAlignment="Center"
+            Spacing="12">
+
+            <Button
+                x:Name="PreviousPageButton"
+                Click="PreviousPageButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <SymbolIcon Symbol="Back"/>
+                    <TextBlock Text="Previous" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <TextBlock
+                x:Name="PageInfoText"
+                VerticalAlignment="Center" />
+
+            <Button
+                x:Name="NextPageButton"
+                Click="NextPageButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="Next" VerticalAlignment="Center"/>
+                    <SymbolIcon Symbol="Forward"/>
+                </StackPanel>
+            </Button>
+
+        </StackPanel>
 
     </Grid>
 

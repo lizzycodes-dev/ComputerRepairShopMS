@@ -15,6 +15,15 @@ public sealed partial class PurchaseManagementPage : Page
     private readonly MasterErpDbContext _masterDb;
     private readonly CurrentBranchContext _currentBranchContext;
 
+    // ==========================================
+    // PAGINATION STATE
+    // ==========================================
+
+    private List<PurchaseDisplayItem> _allPurchases = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
+
     public PurchaseManagementPage(
         TenantDbContextFactory tenantDbFactory,
         MasterErpDbContext masterDb,
@@ -122,7 +131,8 @@ public sealed partial class PurchaseManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    PurchaseListView.ItemsSource = null;
+                    _allPurchases = new();
+                    UpdatePagination();
 
                     PurchaseItemsListView.ItemsSource = null;
 
@@ -155,9 +165,9 @@ public sealed partial class PurchaseManagementPage : Page
                     x.BranchId == currentBranchId!.Value);
             }
 
-            var purchases =
+            _allPurchases =
                 await query
-                    .OrderByDescending(x => x.PurchaseDate)
+                    .OrderByDescending(x => x.PurchaseOrderId)
                     .Select(x => new PurchaseDisplayItem
                     {
                         PurchaseOrderId =
@@ -186,14 +196,16 @@ public sealed partial class PurchaseManagementPage : Page
                     })
                     .ToListAsync();
 
-            PurchaseListView.ItemsSource = purchases;
+            _currentPage = 1;
+
+            UpdatePagination();
 
             EmptyStateText.Visibility =
-                purchases.Count == 0
+                _allPurchases.Count == 0
                     ? Visibility.Visible
                     : Visibility.Collapsed;
 
-            if (purchases.Count == 0)
+            if (_allPurchases.Count == 0)
             {
                 PurchaseItemsListView.ItemsSource = null;
 
@@ -213,24 +225,515 @@ public sealed partial class PurchaseManagementPage : Page
 
 
     // ==========================================
-    // SELECT PURCHASE
+    // PAGINATION
     // ==========================================
 
-    private async void PurchaseListView_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
+    private void UpdatePagination()
     {
-        if (PurchaseListView.SelectedItem
-            is not PurchaseDisplayItem selectedPurchase)
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_allPurchases.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedPurchases =
+            _allPurchases
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        PurchaseListView.ItemsSource = pagedPurchases;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_allPurchases.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_allPurchases.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
+    }
+
+
+    // ==========================================
+    // VIEW PURCHASE
+    // ==========================================
+
+    private async void ViewPurchaseButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not PurchaseDisplayItem purchase)
         {
             return;
         }
 
         await LoadPurchaseDetailsAsync(
-            selectedPurchase.PurchaseOrderId);
+            purchase.PurchaseOrderId);
 
         // Switch to Purchase Details tab
         PurchaseTabView.SelectedIndex = 1;
+    }
+
+
+    // ==========================================
+    // EDIT PURCHASE
+    // ==========================================
+
+    private async void EditPurchaseButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not PurchaseDisplayItem purchase)
+        {
+            return;
+        }
+
+        if (CurrentUser.CompanyId == null)
+            return;
+
+        try
+        {
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
+
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+            var order =
+                await db.PurchaseOrders
+                    .Include(x => x.Supplier)
+                    .FirstOrDefaultAsync(x =>
+                        x.PurchaseOrderId ==
+                        purchase.PurchaseOrderId);
+
+            if (order == null)
+            {
+                await ShowMessageAsync(
+                    "Not Found",
+                    "The purchase could not be found.");
+
+                return;
+            }
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled &&
+                order.BranchId != currentBranchId)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "This purchase belongs to a different branch.");
+
+                return;
+            }
+
+            // ==========================================
+            // NOTES
+            // ==========================================
+
+            var notesBox =
+                new TextBox
+                {
+                    Header = "Notes",
+                    Text = order.Notes ?? string.Empty,
+                    AcceptsReturn = true,
+                    TextWrapping = TextWrapping.Wrap,
+                    Height = 100,
+                    Width = 400
+                };
+
+            // ==========================================
+            // STATUS
+            // ==========================================
+
+            var statusBox =
+                new ComboBox
+                {
+                    Header = "Status",
+                    Width = 400
+                };
+
+            statusBox.Items.Add("Received");
+            statusBox.Items.Add("Pending");
+            statusBox.Items.Add("Cancelled");
+
+            for (int i = 0; i < statusBox.Items.Count; i++)
+            {
+                if (statusBox.Items[i]?.ToString() ==
+                    order.Status)
+                {
+                    statusBox.SelectedIndex = i;
+                    break;
+                }
+            }
+
+            if (statusBox.SelectedIndex < 0)
+            {
+                statusBox.SelectedIndex = 0;
+            }
+
+            // ==========================================
+            // PURCHASE DATE
+            // ==========================================
+
+            var datePicker =
+                new DatePicker
+                {
+                    Header = "Purchase Date",
+                    Date = new DateTimeOffset(
+                        order.PurchaseDate.ToLocalTime()),
+                    Width = 400
+                };
+
+            // ==========================================
+            // PANEL
+            // ==========================================
+
+            var panel =
+                new StackPanel
+                {
+                    Spacing = 12
+                };
+
+            panel.Children.Add(
+                new TextBlock
+                {
+                    Text = $"Purchase: {order.PurchaseOrderNumber}",
+                    FontWeight =
+                        Microsoft.UI.Text.FontWeights.SemiBold,
+                    Opacity = 0.8
+                });
+
+            panel.Children.Add(statusBox);
+            panel.Children.Add(datePicker);
+            panel.Children.Add(notesBox);
+
+            // ==========================================
+            // DIALOG
+            // ==========================================
+
+            var dialog =
+                new ContentDialog
+                {
+                    Title = "Edit Purchase",
+                    Content = panel,
+                    PrimaryButtonText = "Save",
+                    CloseButtonText = "Cancel",
+                    DefaultButton =
+                        ContentDialogButton.Primary,
+                    XamlRoot = XamlRoot
+                };
+
+            var result =
+                await dialog.ShowAsync();
+
+            if (result != ContentDialogResult.Primary)
+                return;
+
+            // ==========================================
+            // VALIDATION
+            // ==========================================
+
+            if (statusBox.SelectedItem
+                is not string newStatus)
+            {
+                await ShowMessageAsync(
+                    "Validation Error",
+                    "Please select a status.");
+
+                return;
+            }
+
+            if (datePicker.Date == null)
+            {
+                await ShowMessageAsync(
+                    "Validation Error",
+                    "Please select a purchase date.");
+
+                return;
+            }
+
+            // ==========================================
+            // APPLY CHANGES
+            //
+            // NOTE: Changing status from/to "Received"
+            // requires inventory adjustment. To keep this
+            // edit simple and safe, status changes
+            // involving "Received" are rejected. Only
+            // Pending <-> Cancelled and "Received" ->
+            // "Received" (no change) are allowed.
+            // ==========================================
+
+            bool statusWasReceived =
+                order.Status == "Received";
+
+            bool statusIsReceived =
+                newStatus == "Received";
+
+            if (statusWasReceived != statusIsReceived)
+            {
+                await ShowMessageAsync(
+                    "Status Change Not Allowed",
+                    "Changing the status to or from \"Received\" is not allowed here because it would affect inventory. Cancel the purchase and record a new one if needed.");
+
+                return;
+            }
+
+            order.Status = newStatus;
+
+            order.PurchaseDate =
+                datePicker.Date
+                    .DateTime
+                    .ToUniversalTime();
+
+            order.Notes =
+                string.IsNullOrWhiteSpace(notesBox.Text)
+                    ? null
+                    : notesBox.Text.Trim();
+
+            await db.SaveChangesAsync();
+
+            await LoadPurchasesAsync();
+
+            await ShowMessageAsync(
+                "Purchase Updated",
+                "The purchase was updated successfully.");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "Failed to edit purchase: " + ex);
+
+            await ShowMessageAsync(
+                "Purchase Error",
+                ex.Message);
+        }
+    }
+
+
+    // ==========================================
+    // DELETE PURCHASE
+    // ==========================================
+
+    private async void DeletePurchaseButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not PurchaseDisplayItem purchase)
+        {
+            return;
+        }
+
+        if (CurrentUser.CompanyId == null)
+            return;
+
+        try
+        {
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
+
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? currentBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                currentBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (currentBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
+
+            var order =
+                await db.PurchaseOrders
+                    .FirstOrDefaultAsync(x =>
+                        x.PurchaseOrderId ==
+                        purchase.PurchaseOrderId);
+
+            if (order == null)
+            {
+                await ShowMessageAsync(
+                    "Not Found",
+                    "The purchase could not be found.");
+
+                return;
+            }
+
+            // ==========================================
+            // BRANCH SAFETY CHECK
+            // ==========================================
+
+            if (branchManagementEnabled &&
+                order.BranchId != currentBranchId)
+            {
+                await ShowMessageAsync(
+                    "Access Denied",
+                    "This purchase belongs to a different branch.");
+
+                return;
+            }
+
+            // ==========================================
+            // CONFIRM
+            // ==========================================
+
+            var confirm =
+                new ContentDialog
+                {
+                    Title = "Delete Purchase",
+                    Content =
+                        $"Delete purchase '{order.PurchaseOrderNumber}'?\n\n" +
+                        "This will remove the purchase and all its items. If the purchase was Received, its quantities will be subtracted from inventory.",
+                    PrimaryButtonText = "Delete",
+                    CloseButtonText = "Cancel",
+                    DefaultButton =
+                        ContentDialogButton.Close,
+                    XamlRoot = XamlRoot
+                };
+
+            var result =
+                await confirm.ShowAsync();
+
+            if (result != ContentDialogResult.Primary)
+                return;
+
+            // ==========================================
+            // REVERSE INVENTORY IF RECEIVED
+            // ==========================================
+
+            if (order.Status == "Received")
+            {
+                var items =
+                    await db.PurchaseOrderItems
+                        .Where(x =>
+                            x.PurchaseOrderId ==
+                            order.PurchaseOrderId)
+                        .ToListAsync();
+
+                foreach (var item in items)
+                {
+                    var inventory =
+                        await db.Inventories
+                            .FirstOrDefaultAsync(x =>
+                                x.ItemId == item.ItemId
+                                &&
+                                x.BranchId == order.BranchId);
+
+                    if (inventory != null)
+                    {
+                        inventory.QuantityOnHand -=
+                            item.Quantity;
+
+                        if (inventory.QuantityOnHand < 0)
+                            inventory.QuantityOnHand = 0;
+                    }
+                }
+            }
+
+            // ==========================================
+            // DELETE ITEMS + ORDER
+            // ==========================================
+
+            var orderItems =
+                await db.PurchaseOrderItems
+                    .Where(x =>
+                        x.PurchaseOrderId ==
+                        order.PurchaseOrderId)
+                    .ToListAsync();
+
+            db.PurchaseOrderItems.RemoveRange(
+                orderItems);
+
+            db.PurchaseOrders.Remove(order);
+
+            await db.SaveChangesAsync();
+
+            await LoadPurchasesAsync();
+
+            await ShowMessageAsync(
+                "Purchase Deleted",
+                "The purchase was deleted successfully.");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "Failed to delete purchase: " + ex);
+
+            await ShowMessageAsync(
+                "Purchase Error",
+                ex.Message);
+        }
     }
 
 
@@ -600,7 +1103,7 @@ public sealed partial class PurchaseManagementPage : Page
             var draftList =
                 new ListView
                 {
-                    Height = 180,
+                    Height = 220,
                     SelectionMode =
                         ListViewSelectionMode.None
                 };
@@ -616,21 +1119,159 @@ public sealed partial class PurchaseManagementPage : Page
                 };
 
 
+            // ==========================================
+            // REFRESH DRAFT LIST
+            //
+            // Each row now has Edit and Remove buttons.
+            // "Edit" loads the values back into the
+            // input fields and removes the row from the
+            // draft list so it can be re-added with new
+            // values (with the "Add Item" button).
+            //
+            // "Remove" deletes the row from the draft
+            // list entirely.
+            // ==========================================
+
             void RefreshDraftList()
             {
                 draftList.Items.Clear();
 
-                foreach (var item in draftItems)
+                foreach (var item in draftItems.ToList())
                 {
-                    draftList.Items.Add(
+                    var capturedItem = item;
+
+                    // ------------------------------
+                    // ROW GRID
+                    // ------------------------------
+
+                    var rowGrid =
+                        new Grid
+                        {
+                            Padding = new Thickness(8, 4, 8, 4)
+                        };
+
+                    rowGrid.ColumnDefinitions.Add(
+                        new ColumnDefinition
+                        {
+                            Width = new GridLength(1, GridUnitType.Star)
+                        });
+
+                    rowGrid.ColumnDefinitions.Add(
+                        new ColumnDefinition
+                        {
+                            Width = GridLength.Auto
+                        });
+
+
+                    // ------------------------------
+                    // TEXT
+                    // ------------------------------
+
+                    var text =
                         new TextBlock
                         {
                             Text =
-                                $"{item.ItemName}   " +
-                                $"× {item.Quantity:0.##}   " +
-                                $"₱{item.UnitCost:N2}   " +
-                                $"= ₱{item.Subtotal:N2}"
-                        });
+                                $"{capturedItem.ItemName}   " +
+                                $"× {capturedItem.Quantity:0.##}   " +
+                                $"₱{capturedItem.UnitCost:N2}   " +
+                                $"= ₱{capturedItem.Subtotal:N2}",
+
+                            VerticalAlignment =
+                                VerticalAlignment.Center,
+
+                            TextTrimming =
+                                TextTrimming.CharacterEllipsis
+                        };
+
+                    Grid.SetColumn(text, 0);
+
+                    rowGrid.Children.Add(text);
+
+
+                    // ------------------------------
+                    // ACTIONS
+                    // ------------------------------
+
+                    var actions =
+                        new StackPanel
+                        {
+                            Orientation = Orientation.Horizontal,
+                            Spacing = 6,
+                            HorizontalAlignment = HorizontalAlignment.Right
+                        };
+
+
+                    // ------------------------------
+                    // EDIT BUTTON
+                    // ------------------------------
+
+                    var editButton =
+                        new Button
+                        {
+                            Content = "Edit"
+                        };
+
+                    editButton.Click +=
+                        (_, _) =>
+                        {
+                            // Load this draft back into the
+                            // input fields for re-entry.
+
+                            var inventoryItem =
+                                inventoryItems
+                                    .FirstOrDefault(x =>
+                                        x.ItemId ==
+                                        capturedItem.ItemId);
+
+                            if (inventoryItem != null)
+                            {
+                                itemBox.SelectedItem =
+                                    inventoryItem;
+                            }
+
+                            quantityBox.Value =
+                                (double)capturedItem.Quantity;
+
+                            unitCostBox.Value =
+                                (double)capturedItem.UnitCost;
+
+                            // Remove from draft list so it
+                            // can be re-added with updated values.
+
+                            draftItems.Remove(capturedItem);
+
+                            RefreshDraftList();
+                        };
+
+
+                    // ------------------------------
+                    // REMOVE BUTTON
+                    // ------------------------------
+
+                    var removeButton =
+                        new Button
+                        {
+                            Content = "Remove"
+                        };
+
+                    removeButton.Click +=
+                        (_, _) =>
+                        {
+                            draftItems.Remove(capturedItem);
+
+                            RefreshDraftList();
+                        };
+
+
+                    actions.Children.Add(editButton);
+                    actions.Children.Add(removeButton);
+
+                    Grid.SetColumn(actions, 1);
+
+                    rowGrid.Children.Add(actions);
+
+
+                    draftList.Items.Add(rowGrid);
                 }
 
                 var total =

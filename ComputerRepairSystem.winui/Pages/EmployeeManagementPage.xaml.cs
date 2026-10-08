@@ -15,6 +15,9 @@ public sealed partial class EmployeeManagementPage : Page
     private readonly SubscriptionAccessService
     _subscriptionAccessService;
     private readonly CurrentBranchContext _currentBranchContext;
+    private List<EmployeeRow> _filteredEmployees = new();
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
 
     private bool _hasBranchModule;
     private List<EmployeeRow> _allEmployees = new();
@@ -189,7 +192,7 @@ public sealed partial class EmployeeManagementPage : Page
 
             var employees =
                 await query
-                    .OrderBy(x => x.LastName)
+                    .OrderByDescending(x => x.EmployeeId)
                     .ThenBy(x => x.FirstName)
                     .ToListAsync();
 
@@ -236,42 +239,123 @@ public sealed partial class EmployeeManagementPage : Page
 
         if (string.IsNullOrWhiteSpace(search))
         {
-            EmployeesListView.ItemsSource =
-                _allEmployees;
-
-            return;
+            _filteredEmployees = _allEmployees;
+        }
+        else
+        {
+            _filteredEmployees =
+                _allEmployees
+                    .Where(x =>
+                        x.FullName.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        x.Position.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        (
+                            x.Employee.Department?
+                                .DepartmentName
+                            ?? string.Empty
+                        ).Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        (
+                            x.Employee.Branch?
+                                .BranchName
+                            ?? string.Empty
+                        ).Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase))
+                    .ToList();
         }
 
-        var filtered =
-            _allEmployees
-                .Where(x =>
-                    x.FullName.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
-                    ||
-                    x.Position.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
-                    ||
-                    (
-                        x.Employee.Department?
-                            .DepartmentName
-                        ?? string.Empty
-                    ).Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
-                    ||
-                    (
-                        x.Employee.Branch?
-                            .BranchName
-                        ?? string.Empty
-                    ).Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase))
+        _currentPage = 1;
+
+        UpdatePagination();
+    }
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
+    private void UpdatePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredEmployees.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var pagedEmployees =
+            _filteredEmployees
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
                 .ToList();
 
-        EmployeesListView.ItemsSource =
-            filtered;
+        EmployeesListView.ItemsSource = pagedEmployees;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}  •  " +
+            $"{_filteredEmployees.Count} total";
+
+        PreviousPageButton.IsEnabled = _currentPage > 1;
+        NextPageButton.IsEnabled = _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        UpdatePagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredEmployees.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        UpdatePagination();
+    }
+
+    // ==========================================
+    // REFRESH
+    // ==========================================
+
+    private async void RefreshEmployeeButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SearchBox.Text = string.Empty;
+
+        await LoadEmployeesAsync();
     }
 
 

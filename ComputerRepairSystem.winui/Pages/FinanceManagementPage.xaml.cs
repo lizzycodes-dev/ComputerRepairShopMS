@@ -15,6 +15,22 @@ public sealed partial class FinanceManagementPage : Page
     private readonly MasterErpDbContext _masterDb;
     private readonly CurrentBranchContext _currentBranchContext;
 
+    // ==========================================
+    // PAGINATION STATE
+    // ==========================================
+
+    private List<InvoiceRow> _filteredInvoices = new();
+    private int _invoicePage = 1;
+
+    private List<PaymentRow> _filteredPayments = new();
+    private int _paymentPage = 1;
+
+    private List<ExpenseRow> _filteredExpenses = new();
+    private int _expensePage = 1;
+
+    private const int _pageSize = 10;
+
+
     public FinanceManagementPage(
         TenantDbContextFactory tenantDbFactory,
         MasterErpDbContext masterDb,
@@ -222,7 +238,8 @@ public sealed partial class FinanceManagementPage : Page
     {
         if (CurrentUser.CompanyId == null)
         {
-            InvoiceList.ItemsSource = null;
+            _filteredInvoices = new();
+            UpdateInvoicePagination();
             return;
         }
 
@@ -244,7 +261,8 @@ public sealed partial class FinanceManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    InvoiceList.ItemsSource = null;
+                    _filteredInvoices = new();
+                    UpdateInvoicePagination();
                     return;
                 }
             }
@@ -270,7 +288,7 @@ public sealed partial class FinanceManagementPage : Page
                     .OrderByDescending(x => x.InvoiceDate)
                     .ToListAsync();
 
-            InvoiceList.ItemsSource =
+            _filteredInvoices =
                 invoices
                     .Select(x => new InvoiceRow
                     {
@@ -304,6 +322,10 @@ public sealed partial class FinanceManagementPage : Page
                         TotalAmount = x.TotalAmount
                     })
                     .ToList();
+
+            _invoicePage = 1;
+
+            UpdateInvoicePagination();
         }
         catch (Exception ex)
         {
@@ -324,7 +346,8 @@ public sealed partial class FinanceManagementPage : Page
     {
         if (CurrentUser.CompanyId == null)
         {
-            InvoiceList.ItemsSource = null;
+            _filteredInvoices = new();
+            UpdateInvoicePagination();
             return;
         }
 
@@ -346,7 +369,8 @@ public sealed partial class FinanceManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    InvoiceList.ItemsSource = null;
+                    _filteredInvoices = new();
+                    UpdateInvoicePagination();
                     return;
                 }
             }
@@ -386,7 +410,7 @@ public sealed partial class FinanceManagementPage : Page
                         .ToList();
             }
 
-            InvoiceList.ItemsSource =
+            _filteredInvoices =
                 invoices
                     .Select(x => new InvoiceRow
                     {
@@ -420,6 +444,10 @@ public sealed partial class FinanceManagementPage : Page
                         TotalAmount = x.TotalAmount
                     })
                     .ToList();
+
+            _invoicePage = 1;
+
+            UpdateInvoicePagination();
         }
         catch (Exception ex)
         {
@@ -427,6 +455,75 @@ public sealed partial class FinanceManagementPage : Page
                 "Invoice Search Error",
                 ex.Message);
         }
+    }
+
+
+    // ==========================================
+    // INVOICE PAGINATION
+    // ==========================================
+
+    private void UpdateInvoicePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredInvoices.Count /
+                    _pageSize));
+
+        if (_invoicePage > totalPages)
+            _invoicePage = totalPages;
+
+        if (_invoicePage < 1)
+            _invoicePage = 1;
+
+        var paged =
+            _filteredInvoices
+                .Skip((_invoicePage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        InvoiceList.ItemsSource = paged;
+
+        InvoicePageInfoText.Text =
+            $"Page {_invoicePage} of {totalPages}  •  " +
+            $"{_filteredInvoices.Count} total";
+
+        PreviousInvoicePageButton.IsEnabled = _invoicePage > 1;
+        NextInvoicePageButton.IsEnabled = _invoicePage < totalPages;
+    }
+
+
+    private void PreviousInvoicePageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_invoicePage <= 1)
+            return;
+
+        _invoicePage--;
+
+        UpdateInvoicePagination();
+    }
+
+
+    private void NextInvoicePageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredInvoices.Count /
+                    _pageSize));
+
+        if (_invoicePage >= totalPages)
+            return;
+
+        _invoicePage++;
+
+        UpdateInvoicePagination();
     }
 
 
@@ -1219,7 +1316,8 @@ public sealed partial class FinanceManagementPage : Page
     {
         if (CurrentUser.CompanyId == null)
         {
-            PaymentList.ItemsSource = null;
+            _filteredPayments = new();
+            UpdatePaymentPagination();
             return;
         }
 
@@ -1241,7 +1339,8 @@ public sealed partial class FinanceManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    PaymentList.ItemsSource = null;
+                    _filteredPayments = new();
+                    UpdatePaymentPagination();
                     return;
                 }
             }
@@ -1266,7 +1365,7 @@ public sealed partial class FinanceManagementPage : Page
                     .OrderByDescending(x => x.PaymentDate)
                     .ToListAsync();
 
-            PaymentList.ItemsSource =
+            _filteredPayments =
                 payments
                     .Select(x => new PaymentRow
                     {
@@ -1296,6 +1395,10 @@ public sealed partial class FinanceManagementPage : Page
                                 "MM/dd/yyyy")
                     })
                     .ToList();
+
+            _paymentPage = 1;
+
+            UpdatePaymentPagination();
         }
         catch (Exception ex)
         {
@@ -1316,7 +1419,8 @@ public sealed partial class FinanceManagementPage : Page
     {
         if (CurrentUser.CompanyId == null)
         {
-            PaymentList.ItemsSource = null;
+            _filteredPayments = new();
+            UpdatePaymentPagination();
             return;
         }
 
@@ -1338,7 +1442,8 @@ public sealed partial class FinanceManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    PaymentList.ItemsSource = null;
+                    _filteredPayments = new();
+                    UpdatePaymentPagination();
                     return;
                 }
             }
@@ -1382,7 +1487,7 @@ public sealed partial class FinanceManagementPage : Page
                         .ToList();
             }
 
-            PaymentList.ItemsSource =
+            _filteredPayments =
                 payments
                     .Select(x => new PaymentRow
                     {
@@ -1412,6 +1517,10 @@ public sealed partial class FinanceManagementPage : Page
                                 "MM/dd/yyyy")
                     })
                     .ToList();
+
+            _paymentPage = 1;
+
+            UpdatePaymentPagination();
         }
         catch (Exception ex)
         {
@@ -1419,6 +1528,75 @@ public sealed partial class FinanceManagementPage : Page
                 "Payment Search Error",
                 ex.Message);
         }
+    }
+
+
+    // ==========================================
+    // PAYMENT PAGINATION
+    // ==========================================
+
+    private void UpdatePaymentPagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredPayments.Count /
+                    _pageSize));
+
+        if (_paymentPage > totalPages)
+            _paymentPage = totalPages;
+
+        if (_paymentPage < 1)
+            _paymentPage = 1;
+
+        var paged =
+            _filteredPayments
+                .Skip((_paymentPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        PaymentList.ItemsSource = paged;
+
+        PaymentPageInfoText.Text =
+            $"Page {_paymentPage} of {totalPages}  •  " +
+            $"{_filteredPayments.Count} total";
+
+        PreviousPaymentPageButton.IsEnabled = _paymentPage > 1;
+        NextPaymentPageButton.IsEnabled = _paymentPage < totalPages;
+    }
+
+
+    private void PreviousPaymentPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_paymentPage <= 1)
+            return;
+
+        _paymentPage--;
+
+        UpdatePaymentPagination();
+    }
+
+
+    private void NextPaymentPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredPayments.Count /
+                    _pageSize));
+
+        if (_paymentPage >= totalPages)
+            return;
+
+        _paymentPage++;
+
+        UpdatePaymentPagination();
     }
 
 
@@ -2121,7 +2299,8 @@ public sealed partial class FinanceManagementPage : Page
     {
         if (CurrentUser.CompanyId == null)
         {
-            ExpenseList.ItemsSource = null;
+            _filteredExpenses = new();
+            UpdateExpensePagination();
             return;
         }
 
@@ -2143,7 +2322,8 @@ public sealed partial class FinanceManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    ExpenseList.ItemsSource = null;
+                    _filteredExpenses = new();
+                    UpdateExpensePagination();
                     return;
                 }
             }
@@ -2166,7 +2346,7 @@ public sealed partial class FinanceManagementPage : Page
                     .OrderByDescending(x => x.ExpenseDate)
                     .ToListAsync();
 
-            ExpenseList.ItemsSource =
+            _filteredExpenses =
                 expenses
                     .Select(x => new ExpenseRow
                     {
@@ -2193,6 +2373,10 @@ public sealed partial class FinanceManagementPage : Page
                                 "MM/dd/yyyy")
                     })
                     .ToList();
+
+            _expensePage = 1;
+
+            UpdateExpensePagination();
         }
         catch (Exception ex)
         {
@@ -2213,7 +2397,8 @@ public sealed partial class FinanceManagementPage : Page
     {
         if (CurrentUser.CompanyId == null)
         {
-            ExpenseList.ItemsSource = null;
+            _filteredExpenses = new();
+            UpdateExpensePagination();
             return;
         }
 
@@ -2235,7 +2420,8 @@ public sealed partial class FinanceManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    ExpenseList.ItemsSource = null;
+                    _filteredExpenses = new();
+                    UpdateExpensePagination();
                     return;
                 }
             }
@@ -2276,7 +2462,7 @@ public sealed partial class FinanceManagementPage : Page
                         .ToList();
             }
 
-            ExpenseList.ItemsSource =
+            _filteredExpenses =
                 expenses
                     .Select(x => new ExpenseRow
                     {
@@ -2303,6 +2489,10 @@ public sealed partial class FinanceManagementPage : Page
                                 "MM/dd/yyyy")
                     })
                     .ToList();
+
+            _expensePage = 1;
+
+            UpdateExpensePagination();
         }
         catch (Exception ex)
         {
@@ -2314,6 +2504,75 @@ public sealed partial class FinanceManagementPage : Page
 
 
     // ==========================================
+    // EXPENSE PAGINATION
+    // ==========================================
+
+    private void UpdateExpensePagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredExpenses.Count /
+                    _pageSize));
+
+        if (_expensePage > totalPages)
+            _expensePage = totalPages;
+
+        if (_expensePage < 1)
+            _expensePage = 1;
+
+        var paged =
+            _filteredExpenses
+                .Skip((_expensePage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        ExpenseList.ItemsSource = paged;
+
+        ExpensePageInfoText.Text =
+            $"Page {_expensePage} of {totalPages}  •  " +
+            $"{_filteredExpenses.Count} total";
+
+        PreviousExpensePageButton.IsEnabled = _expensePage > 1;
+        NextExpensePageButton.IsEnabled = _expensePage < totalPages;
+    }
+
+
+    private void PreviousExpensePageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_expensePage <= 1)
+            return;
+
+        _expensePage--;
+
+        UpdateExpensePagination();
+    }
+
+
+    private void NextExpensePageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredExpenses.Count /
+                    _pageSize));
+
+        if (_expensePage >= totalPages)
+            return;
+
+        _expensePage++;
+
+        UpdateExpensePagination();
+    }
+
+
+    // ==========================================
     // ADD EXPENSE
     // ==========================================
 
@@ -2321,7 +2580,6 @@ public sealed partial class FinanceManagementPage : Page
         object sender,
         RoutedEventArgs e)
     {
-
         if (CurrentUser.CompanyId == null)
         {
             return;
@@ -2379,10 +2637,6 @@ public sealed partial class FinanceManagementPage : Page
                     SelectedIndex = 0,
                     MinWidth = 320
                 };
-
-            // ==========================================
-            // DEFAULT TO GLOBAL SELECTED BRANCH
-            // ==========================================
 
             if (branchManagementEnabled)
             {
@@ -2667,7 +2921,6 @@ public sealed partial class FinanceManagementPage : Page
                     MinWidth = 320
                 };
 
-            // Select the expense's current branch
             var currentBranchIndex =
                 branchOptions.FindIndex(
                     x => x.BranchId == expense.BranchId);

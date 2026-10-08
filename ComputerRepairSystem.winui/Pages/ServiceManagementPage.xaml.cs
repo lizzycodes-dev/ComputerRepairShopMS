@@ -19,9 +19,17 @@ public sealed partial class ServiceManagementPage : Page
     private readonly CurrentBranchContext _currentBranchContext;
 
     private Customer? _selectedCustomer;
-    private List<Customer> _customers = new();
+
+    // ==========================================
+    // PAGINATION STATE
+    // ==========================================
+
+    private List<Customer> _customers = new();          // full list
+    private List<Customer> _filteredCustomers = new();  // after search
     private int _currentPage = 1;
-    private const int _pageSize = 5;
+    private const int _pageSize = 10;
+
+
     public ServiceManagementPage(
         CustomerService customerService,
         TenantDbContextFactory tenantDbFactory,
@@ -85,8 +93,6 @@ public sealed partial class ServiceManagementPage : Page
 
     private async void OnGlobalBranchChanged()
     {
-        // The branch selector lives in MainWindow.
-        // When the user changes it, refresh this page.
         if (!IsLoaded)
             return;
 
@@ -102,9 +108,8 @@ public sealed partial class ServiceManagementPage : Page
 
             _customers = customers.ToList();
 
-            _currentPage = 1;
-
-            UpdateCustomerPagination();
+            // Re-apply the current search filter, then reset to page 1
+            ApplyCustomerSearch(resetPage: true);
         }
         catch (Exception ex)
         {
@@ -298,6 +303,7 @@ public sealed partial class ServiceManagementPage : Page
 
         return true;
     }
+
     private void ClearForm()
     {
         _selectedCustomer = null;
@@ -559,6 +565,7 @@ public sealed partial class ServiceManagementPage : Page
                 InfoBarSeverity.Error);
         }
     }
+
     private bool ValidateCustomerInput()
     {
         if (string.IsNullOrWhiteSpace(
@@ -583,6 +590,7 @@ public sealed partial class ServiceManagementPage : Page
 
         return true;
     }
+
     private bool ValidateDeviceInput()
     {
         if (string.IsNullOrWhiteSpace(
@@ -622,41 +630,54 @@ public sealed partial class ServiceManagementPage : Page
         object sender,
         TextChangedEventArgs e)
     {
+        ApplyCustomerSearch(resetPage: true);
+    }
+
+    // ==========================================
+    // SEARCH + PAGINATION PIPELINE
+    // ==========================================
+
+    private void ApplyCustomerSearch(bool resetPage)
+    {
         var search =
             CustomerSearchBox.Text.Trim();
 
         if (string.IsNullOrWhiteSpace(search))
         {
-            CustomerList.ItemsSource =
-                _customers;
-
-            return;
+            _filteredCustomers = _customers;
+        }
+        else
+        {
+            _filteredCustomers =
+                _customers
+                    .Where(c =>
+                        c.FirstName.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        c.LastName.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        (
+                            c.FirstName + " " + c.LastName
+                        ).Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase))
+                    .ToList();
         }
 
-        var results =
-            _customers
-                .Where(c =>
-                    c.FirstName.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
-                    ||
-                    c.LastName.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
-                    ||
-                    (
-                        c.FirstName + " " + c.LastName
-                    ).Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase))
-                .ToList();
+        if (resetPage)
+        {
+            _currentPage = 1;
+        }
 
-        CustomerList.ItemsSource =
-            results;
+        UpdateCustomerPagination();
     }
+
     private void NewCustomerButton_Click(
-    object sender,
-    RoutedEventArgs e)
+        object sender,
+        RoutedEventArgs e)
     {
         _selectedCustomer = null;
 
@@ -688,17 +709,31 @@ public sealed partial class ServiceManagementPage : Page
             InfoBarSeverity.Informational);
     }
 
+    // ==========================================
+    // VIEW CUSTOMER
+    //
+    // Uses button.DataContext (guaranteed in a DataTemplate)
+    // instead of button.Tag, which is not always populated.
+    // ==========================================
+
     private async void ViewCustomerButton_Click(
         object sender,
         RoutedEventArgs e)
     {
         if (sender is not Button button)
-        {
             return;
-        }
 
-        if (button.Tag is not Customer customer)
+        // Prefer Tag if set, otherwise fall back to DataContext
+        var customer =
+            (button.Tag as Customer)
+            ?? (button.DataContext as Customer);
+
+        if (customer == null)
         {
+            ShowStatus(
+                "Unable to open customer details.",
+                InfoBarSeverity.Error);
+
             return;
         }
 
@@ -707,6 +742,7 @@ public sealed partial class ServiceManagementPage : Page
         await ShowCustomerDetailsAsync(
             customer.CustomerId);
     }
+
     private async Task ShowCustomerDetailsAsync(
         int customerId)
     {
@@ -734,6 +770,10 @@ public sealed partial class ServiceManagementPage : Page
 
             if (customer == null)
             {
+                ShowStatus(
+                    "Customer not found.",
+                    InfoBarSeverity.Warning);
+
                 return;
             }
 
@@ -1145,9 +1185,10 @@ public sealed partial class ServiceManagementPage : Page
                 InfoBarSeverity.Error);
         }
     }
+
     private async void CustomerList_SelectionChanged(
-    object sender,
-    SelectionChangedEventArgs e)
+        object sender,
+        SelectionChangedEventArgs e)
     {
         if (CustomerList.SelectedItem is not Customer customer)
         {
@@ -1195,22 +1236,27 @@ public sealed partial class ServiceManagementPage : Page
         StatusBox.SelectedIndex = 0;
     }
 
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+
     private void UpdateCustomerPagination()
     {
         var totalPages =
             Math.Max(
                 1,
                 (int)Math.Ceiling(
-                    (double)_customers.Count /
+                    (double)_filteredCustomers.Count /
                     _pageSize));
 
         if (_currentPage > totalPages)
-        {
             _currentPage = totalPages;
-        }
+
+        if (_currentPage < 1)
+            _currentPage = 1;
 
         var pagedCustomers =
-            _customers
+            _filteredCustomers
                 .Skip(
                     (_currentPage - 1) *
                     _pageSize)
@@ -1229,6 +1275,7 @@ public sealed partial class ServiceManagementPage : Page
         NextPageButton.IsEnabled =
             _currentPage < totalPages;
     }
+
     private void PreviousPageButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -1242,14 +1289,17 @@ public sealed partial class ServiceManagementPage : Page
 
         UpdateCustomerPagination();
     }
+
     private void NextPageButton_Click(
         object sender,
         RoutedEventArgs e)
     {
         var totalPages =
-            (int)Math.Ceiling(
-                (double)_customers.Count /
-                _pageSize);
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredCustomers.Count /
+                    _pageSize));
 
         if (_currentPage >= totalPages)
         {

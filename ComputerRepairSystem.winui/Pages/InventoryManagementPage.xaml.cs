@@ -15,7 +15,16 @@ public sealed partial class InventoryManagementPage : Page
     private readonly MasterErpDbContext _masterDb;
     private readonly CurrentBranchContext _currentBranchContext;
 
+    // ==========================================
+    // PAGINATION STATE
+    // ==========================================
+
     private List<InventoryDisplayItem> _inventory = new();
+    private List<InventoryDisplayItem> _filteredInventory = new();
+
+    private int _currentPage = 1;
+    private const int _pageSize = 10;
+
 
     public InventoryManagementPage(
         TenantDbContextFactory tenantDbFactory,
@@ -102,13 +111,18 @@ public sealed partial class InventoryManagementPage : Page
 
     // ==============================
     // LOAD INVENTORY
+    //
+    // Loads the FULL CATALOG (InventoryItems), then left-joins
+    // stock from Inventories for the current branch. This way
+    // items with no stock row yet still appear (qty 0).
     // ==============================
 
     private async Task LoadInventoryAsync()
     {
         if (CurrentUser.CompanyId == null)
         {
-            InventoryList.ItemsSource = null;
+            _inventory = new();
+            ApplySearch();
             return;
         }
 
@@ -131,7 +145,8 @@ public sealed partial class InventoryManagementPage : Page
                 if (currentBranchId == null)
                 {
                     _inventory = new();
-                    InventoryList.ItemsSource = null;
+                    _filteredInventory = new();
+                    ApplyPagination();
 
                     await ShowMessageAsync(
                         "Branch Not Selected",
@@ -143,14 +158,38 @@ public sealed partial class InventoryManagementPage : Page
 
 
             // ==========================================
-            // LOAD INVENTORY (branch-filtered)
+            // 1. LOAD FULL CATALOG
+            // ==========================================
+
+            var catalog =
+                await db.InventoryItems
+                    .AsNoTracking()
+                    .Where(x => x.IsActive)
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ThenByDescending(x => x.ItemId)
+                    .ToListAsync();
+
+
+            if (catalog.Count == 0)
+            {
+                _inventory = new();
+                ApplySearch();
+                return;
+            }
+
+
+            var itemIds =
+                catalog.Select(x => x.ItemId).ToList();
+
+
+            // ==========================================
+            // 2. LOAD INVENTORY ROWS (per branch)
             // ==========================================
 
             var inventoryQuery =
                 db.Inventories
                     .AsNoTracking()
-                    .Include(x => x.Item)
-                    .Where(x => x.Item != null);
+                    .Where(x => itemIds.Contains(x.ItemId));
 
             if (branchManagementEnabled)
             {
@@ -159,35 +198,29 @@ public sealed partial class InventoryManagementPage : Page
             }
             else
             {
-                // No branch module -> only company-wide stock
                 inventoryQuery = inventoryQuery.Where(x =>
                     x.BranchId == null);
             }
 
-            var inventory =
-                await inventoryQuery
-                    .OrderBy(x => x.Item!.ItemName)
-                    .ToListAsync();
+            var inventories =
+                await inventoryQuery.ToListAsync();
 
-
-            var itemIds =
-                inventory
-                    .Select(x => x.ItemId)
-                    .ToList();
+            var inventoryByItemId =
+                inventories
+                    .GroupBy(x => x.ItemId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First());
 
 
             // ==========================================
-            // USED QUANTITIES
-            //
-            // Branch-filtered so one branch's repairs do
-            // not reduce another branch's availability.
+            // 3. USED QUANTITIES (branch-filtered)
             // ==========================================
 
             var usedQuery =
                 db.RepairItems
                     .AsNoTracking()
-                    .Where(x =>
-                        itemIds.Contains(x.ItemId));
+                    .Where(x => itemIds.Contains(x.ItemId));
 
             if (branchManagementEnabled)
             {
@@ -209,34 +242,51 @@ public sealed partial class InventoryManagementPage : Page
                         x => x.Quantity);
 
 
+            // ==========================================
+            // 4. PROJECT
+            // ==========================================
+
             _inventory =
-                inventory
-                    .Select(x =>
+                catalog
+                    .Select(item =>
                     {
-                        var usedQuantity =
-                            usedQuantities.TryGetValue(
-                                x.ItemId,
-                                out var quantity)
-                                ? quantity
-                                : 0;
+                        inventoryByItemId.TryGetValue(
+                            item.ItemId,
+                            out var stockRow);
+
+                        var quantityOnHand =
+                            stockRow?.QuantityOnHand ?? 0;
+
+                        usedQuantities.TryGetValue(
+                            item.ItemId,
+                            out var usedQuantity);
 
                         return new InventoryDisplayItem
                         {
-                            InventoryId = x.InventoryId,
-                            ItemId = x.ItemId,
-                            ItemName = x.Item!.ItemName,
-                            Category = x.Item.Category,
-                            Brand = x.Item.Brand,
-                            Model = x.Item.Model,
-                            Unit = x.Item.Unit,
-                            QuantityOnHand = x.QuantityOnHand,
+                            InventoryId =
+                                stockRow?.InventoryId ?? 0,
+
+                            ItemId = item.ItemId,
+
+                            ItemName = item.ItemName,
+
+                            Category = item.Category,
+
+                            Brand = item.Brand,
+
+                            Model = item.Model,
+
+                            Unit = item.Unit,
+
+                            QuantityOnHand = quantityOnHand,
+
                             AvailableQuantity =
-                                x.QuantityOnHand - usedQuantity
+                                quantityOnHand - usedQuantity
                         };
                     })
                     .ToList();
 
-            InventoryList.ItemsSource = _inventory;
+            ApplySearch();
         }
         catch (Exception ex)
         {
@@ -247,7 +297,6 @@ public sealed partial class InventoryManagementPage : Page
     }
 
 
-
     // ==============================
     // SEARCH
     // ==============================
@@ -256,44 +305,129 @@ public sealed partial class InventoryManagementPage : Page
         object sender,
         TextChangedEventArgs e)
     {
+        ApplySearch();
+    }
+
+
+    private void ApplySearch()
+    {
         var search =
             SearchBox.Text.Trim();
 
         if (string.IsNullOrWhiteSpace(search))
         {
-            InventoryList.ItemsSource = _inventory;
-            return;
+            _filteredInventory = _inventory;
+        }
+        else
+        {
+            _filteredInventory =
+                _inventory
+                    .Where(x =>
+                        x.ItemName.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+
+                        || x.Category.Contains(
+                            search,
+                            StringComparison.OrdinalIgnoreCase)
+
+                        || (x.Brand ?? "")
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase)
+
+                        || (x.Model ?? "")
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase)
+                    )
+                    .ToList();
         }
 
-        var filtered =
-            _inventory
-                .Where(x =>
-                    x.ItemName.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
+        // Reset to page 1 whenever the search changes
+        _currentPage = 1;
 
-                    || x.Category.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase)
+        ApplyPagination();
+    }
 
-                    || (x.Brand ?? "")
-                        .Contains(
-                            search,
-                            StringComparison.OrdinalIgnoreCase)
 
-                    || (x.Model ?? "")
-                        .Contains(
-                            search,
-                            StringComparison.OrdinalIgnoreCase)
-                )
+    // ==============================
+    // PAGINATION
+    // ==============================
+
+    private void ApplyPagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredInventory.Count /
+                    _pageSize));
+
+        if (_currentPage > totalPages)
+            _currentPage = totalPages;
+
+        if (_currentPage < 1)
+            _currentPage = 1;
+
+        var paged =
+            _filteredInventory
+                .Skip((_currentPage - 1) * _pageSize)
+                .Take(_pageSize)
                 .ToList();
 
-        InventoryList.ItemsSource = filtered;
+        InventoryList.ItemsSource = paged;
+
+        PageInfoText.Text =
+            $"Page {_currentPage} of {totalPages}";
+
+        PreviousPageButton.IsEnabled =
+            _currentPage > 1;
+
+        NextPageButton.IsEnabled =
+            _currentPage < totalPages;
+    }
+
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_currentPage <= 1)
+            return;
+
+        _currentPage--;
+
+        ApplyPagination();
+    }
+
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_filteredInventory.Count /
+                    _pageSize));
+
+        if (_currentPage >= totalPages)
+            return;
+
+        _currentPage++;
+
+        ApplyPagination();
     }
 
 
     // ==============================
     // NEW ITEM
+    //
+    // Creates the catalog row AND a zero-quantity Inventory row
+    // for the current branch (or null-branch if branch module off),
+    // so the item is immediately visible in the table.
     // ==============================
 
     private async void NewItemButton_Click(
@@ -419,42 +553,100 @@ public sealed partial class InventoryManagementPage : Page
             return;
         }
 
-        await using var db =
-            await _tenantDbFactory.CreateAsync(
-                CurrentUser.CompanyId.Value);
-
-
-        var item = new InventoryItem
+        try
         {
-            ItemName = itemNameBox.Text.Trim(),
-            Category = categoryBox.Text.Trim(),
-            Brand = string.IsNullOrWhiteSpace(brandBox.Text)
-                ? null
-                : brandBox.Text.Trim(),
-            Model = string.IsNullOrWhiteSpace(modelBox.Text)
-                ? null
-                : modelBox.Text.Trim(),
-            Unit = string.IsNullOrWhiteSpace(unitBox.Text)
-                ? "Piece"
-                : unitBox.Text.Trim(),
-            UnitCost = (decimal)unitCostBox.Value,
-            UnitPrice = (decimal)unitPriceBox.Value,
-            ReorderLevel = (decimal)reorderLevelBox.Value,
-            IsActive = true
-        };
+            await using var db =
+                await _tenantDbFactory.CreateAsync(
+                    CurrentUser.CompanyId.Value);
 
 
-        db.InventoryItems.Add(item);
+            // ==========================================
+            // DETERMINE TARGET BRANCH
+            // ==========================================
 
-        await db.SaveChangesAsync();
+            var branchManagementEnabled =
+                await HasBranchManagementAsync();
+
+            int? targetBranchId = null;
+
+            if (branchManagementEnabled)
+            {
+                targetBranchId =
+                    _currentBranchContext.BranchId;
+
+                if (targetBranchId == null)
+                {
+                    await ShowMessageAsync(
+                        "Branch Not Selected",
+                        "Please select a branch from the global branch selector.");
+
+                    return;
+                }
+            }
 
 
-        await LoadInventoryAsync();
+            // ==========================================
+            // CREATE CATALOG ITEM
+            // ==========================================
+
+            var item = new InventoryItem
+            {
+                ItemName = itemNameBox.Text.Trim(),
+                Category = categoryBox.Text.Trim(),
+                Brand = string.IsNullOrWhiteSpace(brandBox.Text)
+                    ? null
+                    : brandBox.Text.Trim(),
+                Model = string.IsNullOrWhiteSpace(modelBox.Text)
+                    ? null
+                    : modelBox.Text.Trim(),
+                Unit = string.IsNullOrWhiteSpace(unitBox.Text)
+                    ? "Piece"
+                    : unitBox.Text.Trim(),
+                UnitCost = (decimal)unitCostBox.Value,
+                UnitPrice = (decimal)unitPriceBox.Value,
+                ReorderLevel = (decimal)reorderLevelBox.Value,
+                IsActive = true
+            };
 
 
-        await ShowMessageAsync(
-            "Item Added",
-            "The inventory item has been added successfully.");
+            db.InventoryItems.Add(item);
+
+            await db.SaveChangesAsync();
+
+
+            // ==========================================
+            // CREATE ZERO-QUANTITY INVENTORY ROW
+            //
+            // This ensures the item shows up immediately in the
+            // branch-filtered list without needing "Add Stock"
+            // first.
+            // ==========================================
+
+            var stockRow = new Inventory
+            {
+                ItemId = item.ItemId,
+                BranchId = targetBranchId,
+                QuantityOnHand = 0
+            };
+
+            db.Inventories.Add(stockRow);
+
+            await db.SaveChangesAsync();
+
+
+            await LoadInventoryAsync();
+
+
+            await ShowMessageAsync(
+                "Item Added",
+                "The inventory item has been added successfully.");
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync(
+                "Error Adding Item",
+                ex.Message);
+        }
     }
 
 
@@ -542,7 +734,6 @@ public sealed partial class InventoryManagementPage : Page
 
             if (branchManagementEnabled)
             {
-                // Informational text - no additional picker
                 panel.Children.Add(
                     new TextBlock
                     {
@@ -585,13 +776,6 @@ public sealed partial class InventoryManagementPage : Page
             var quantity =
                 (decimal)quantityBox.Value;
 
-
-            // ==========================================
-            // FIND OR CREATE INVENTORY ROW
-            //
-            // Uses targetBranchId (the global branch when
-            // branch management is on, otherwise null).
-            // ==========================================
 
             var inventory =
                 await db.Inventories

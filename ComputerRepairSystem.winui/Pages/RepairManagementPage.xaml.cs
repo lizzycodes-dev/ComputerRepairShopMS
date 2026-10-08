@@ -15,6 +15,30 @@ public sealed partial class RepairManagementPage : Page
     private readonly MasterErpDbContext _masterDb;
     private readonly CurrentBranchContext _currentBranchContext;
 
+    // ==========================================
+    // PAGINATION — SERVICE REQUESTS
+    // ==========================================
+
+    private List<ServiceRequest> _serviceRequests = new();
+    private int _serviceRequestPage = 1;
+
+    // ==========================================
+    // PAGINATION — ACTIVE REPAIRS
+    // ==========================================
+
+    private List<Repair> _repairs = new();
+    private int _repairPage = 1;
+
+    // ==========================================
+    // PAGINATION — REPAIR HISTORY
+    // ==========================================
+
+    private List<Repair> _repairHistory = new();
+    private int _historyPage = 1;
+
+    private const int _pageSize = 10;
+
+
     public RepairManagementPage(
         TenantDbContextFactory tenantDbFactory,
         MasterErpDbContext masterDb,
@@ -85,13 +109,46 @@ public sealed partial class RepairManagementPage : Page
         await LoadRepairHistoryAsync();
     }
 
+    // ==========================================
+    // TAB REFRESH
+    // ==========================================
+
+    private async void RepairTabView_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        switch (RepairTabView.SelectedIndex)
+        {
+            case 0:
+                await LoadServiceRequestsAsync();
+                break;
+
+            case 1:
+                await LoadRepairsAsync();
+                break;
+
+            case 2:
+                await LoadRepairHistoryAsync();
+                break;
+        }
+    }
+
+
+    // ==========================================
+    // LOAD SERVICE REQUESTS
+    // ==========================================
+
     private async Task LoadServiceRequestsAsync()
     {
         try
         {
             if (CurrentUser.CompanyId == null)
             {
-                ServiceRequestList.ItemsSource = null;
+                _serviceRequests = new();
+                UpdateServiceRequestPagination();
                 return;
             }
 
@@ -119,7 +176,8 @@ public sealed partial class RepairManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    ServiceRequestList.ItemsSource = null;
+                    _serviceRequests = new();
+                    UpdateServiceRequestPagination();
 
                     await ShowMessageAsync(
                         "Branch Not Selected",
@@ -132,23 +190,84 @@ public sealed partial class RepairManagementPage : Page
                     x.BranchId == currentBranchId.Value);
             }
 
-            var requests =
+            // Newest first — ServiceRequestId is an IDENTITY column
+            _serviceRequests =
                 await query
-                    .OrderByDescending(x => x.RequestDate)
+                    .OrderByDescending(x => x.ServiceRequestId)
                     .ToListAsync();
 
-            ServiceRequestList.ItemsSource =
-                requests;
+            _serviceRequestPage = 1;
+
+            UpdateServiceRequestPagination();
         }
         catch (Exception ex)
         {
-            ServiceRequestList.ItemsSource = null;
+            _serviceRequests = new();
+            UpdateServiceRequestPagination();
 
             System.Diagnostics.Debug.WriteLine(
                 "Failed to load service requests: " + ex);
         }
     }
 
+
+    private void UpdateServiceRequestPagination()
+    {
+        var totalPages =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    (double)_serviceRequests.Count / _pageSize));
+
+        if (_serviceRequestPage > totalPages)
+            _serviceRequestPage = totalPages;
+
+        if (_serviceRequestPage < 1)
+            _serviceRequestPage = 1;
+
+        var paged =
+            _serviceRequests
+                .Skip((_serviceRequestPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        ServiceRequestList.ItemsSource = paged;
+
+        ServiceRequestPageInfoText.Text =
+            $"Page {_serviceRequestPage} of {totalPages}  •  " +
+            $"{_serviceRequests.Count} total";
+
+        PreviousServiceRequestPageButton.IsEnabled =
+            _serviceRequestPage > 1;
+
+        NextServiceRequestPageButton.IsEnabled =
+            _serviceRequestPage < totalPages;
+    }
+
+    private void PreviousServiceRequestPageButton_Click(
+        object sender, RoutedEventArgs e)
+    {
+        if (_serviceRequestPage <= 1) return;
+        _serviceRequestPage--;
+        UpdateServiceRequestPagination();
+    }
+
+    private void NextServiceRequestPageButton_Click(
+        object sender, RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(1, (int)Math.Ceiling(
+                (double)_serviceRequests.Count / _pageSize));
+
+        if (_serviceRequestPage >= totalPages) return;
+        _serviceRequestPage++;
+        UpdateServiceRequestPagination();
+    }
+
+
+    // ==========================================
+    // DIAGNOSE
+    // ==========================================
 
     private async void DiagnoseButton_Click(
         object sender,
@@ -246,37 +365,28 @@ public sealed partial class RepairManagementPage : Page
         var result = await dialog.ShowAsync();
 
         if (result == ContentDialogResult.None)
-        {
             return;
-        }
 
-        // Customer does not approve the repair.
         if (result == ContentDialogResult.Secondary)
         {
             await CancelServiceRequestAsync(
                 request.ServiceRequestId);
-
             return;
         }
 
-        // Customer approves the repair.
-        if (string.IsNullOrWhiteSpace(
-                diagnosisBox.Text))
+        if (string.IsNullOrWhiteSpace(diagnosisBox.Text))
         {
             await ShowMessageAsync(
                 "Diagnosis Required",
                 "Please enter a diagnosis before proceeding.");
-
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(
-                repairDescriptionBox.Text))
+        if (string.IsNullOrWhiteSpace(repairDescriptionBox.Text))
         {
             await ShowMessageAsync(
                 "Repair Description Required",
                 "Please enter the repair description before proceeding.");
-
             return;
         }
 
@@ -291,10 +401,7 @@ public sealed partial class RepairManagementPage : Page
     {
         try
         {
-            if (CurrentUser.CompanyId == null)
-            {
-                return;
-            }
+            if (CurrentUser.CompanyId == null) return;
 
             await using var db =
                 await _tenantDbFactory.CreateAsync(
@@ -302,22 +409,18 @@ public sealed partial class RepairManagementPage : Page
 
             var request =
                 await db.ServiceRequests
-                    .FirstOrDefaultAsync(
-                        x =>
-                            x.ServiceRequestId ==
-                            serviceRequestId);
+                    .FirstOrDefaultAsync(x =>
+                        x.ServiceRequestId == serviceRequestId);
 
             if (request == null)
             {
                 await ShowMessageAsync(
                     "Not Found",
                     "The service request could not be found.");
-
                 return;
             }
 
             request.Status = "Cancelled";
-
             await db.SaveChangesAsync();
 
             await LoadServiceRequestsAsync();
@@ -333,6 +436,7 @@ public sealed partial class RepairManagementPage : Page
                 ex.Message);
         }
     }
+
     private async Task CreateRepairAsync(
         ServiceRequest request,
         string diagnosis,
@@ -340,17 +444,13 @@ public sealed partial class RepairManagementPage : Page
     {
         try
         {
-            if (CurrentUser.CompanyId == null)
-            {
-                return;
-            }
+            if (CurrentUser.CompanyId == null) return;
 
             if (string.IsNullOrWhiteSpace(CurrentUser.UserId))
             {
                 await ShowMessageAsync(
                     "User Not Found",
                     "No logged-in user was found.");
-
                 return;
             }
 
@@ -358,82 +458,55 @@ public sealed partial class RepairManagementPage : Page
                 await _tenantDbFactory.CreateAsync(
                     CurrentUser.CompanyId.Value);
 
-            // ==========================================
-            // CHECK IF REPAIR ALREADY EXISTS
-            // ==========================================
-
             var existingRepair =
                 await db.Repairs
-                    .AnyAsync(
-                        x =>
-                            x.ServiceRequestId ==
-                            request.ServiceRequestId);
+                    .AnyAsync(x =>
+                        x.ServiceRequestId ==
+                        request.ServiceRequestId);
 
             if (existingRepair)
             {
                 await ShowMessageAsync(
                     "Repair Already Exists",
                     "A repair already exists for this service request.");
-
                 return;
             }
 
-            // ==========================================
-            // GET THE ACTUAL SERVICE REQUEST
-            // ==========================================
-
             var serviceRequest =
                 await db.ServiceRequests
-                    .FirstOrDefaultAsync(
-                        x =>
-                            x.ServiceRequestId ==
-                            request.ServiceRequestId);
+                    .FirstOrDefaultAsync(x =>
+                        x.ServiceRequestId ==
+                        request.ServiceRequestId);
 
             if (serviceRequest == null)
             {
                 await ShowMessageAsync(
                     "Request Not Found",
                     "The service request could not be found.");
-
                 return;
             }
-
-            // ==========================================
-            // GET THE LOGGED-IN EMPLOYEE
-            // ==========================================
 
             var masterUserId = CurrentUser.UserId;
 
             var technician =
                 await db.Employees
-                    .FirstOrDefaultAsync(
-                        x =>
-                            x.MasterUserId == masterUserId &&
-                            x.IsActive);
+                    .FirstOrDefaultAsync(x =>
+                        x.MasterUserId == masterUserId &&
+                        x.IsActive);
 
             if (technician == null)
             {
                 await ShowMessageAsync(
                     "Employee Not Found",
-                    $"The logged-in user is not linked to an active employee record.\n\n" +
-                    $"Master User ID: {masterUserId}");
-
+                    "The logged-in user is not linked to an active employee record.");
                 return;
             }
-
-            // ==========================================
-            // CHECK BRANCH MANAGEMENT
-            // ==========================================
 
             var branchManagementEnabled =
                 await HasBranchManagementAsync();
 
             if (branchManagementEnabled)
             {
-                // ======================================
-                // GET THE GLOBALLY SELECTED BRANCH
-                // ======================================
-
                 var currentBranchId =
                     _currentBranchContext.BranchId;
 
@@ -442,20 +515,14 @@ public sealed partial class RepairManagementPage : Page
                     await ShowMessageAsync(
                         "Branch Not Selected",
                         "Please select a branch from the global branch selector.");
-
                     return;
                 }
-
-                // ======================================
-                // CHECK SERVICE REQUEST BRANCH
-                // ======================================
 
                 if (serviceRequest.BranchId == null)
                 {
                     await ShowMessageAsync(
                         "Branch Not Assigned",
                         "This service request is not assigned to a branch.");
-
                     return;
                 }
 
@@ -463,54 +530,27 @@ public sealed partial class RepairManagementPage : Page
                 {
                     await ShowMessageAsync(
                         "Access Denied",
-                        "This service request belongs to a different branch than the one currently selected.");
-
+                        "This service request belongs to a different branch.");
                     return;
                 }
             }
 
-            // ==========================================
-            // CREATE REPAIR
-            // ==========================================
-
             var repair = new Repair
             {
-                ServiceRequestId =
-                    request.ServiceRequestId,
-
-                Diagnosis =
-                    diagnosis,
-
-                RepairDescription =
-                    repairDescription,
-
-                Status =
-                    "Pending",
-
-                StartDate =
-                    null,
-
-                EndDate =
-                    null,
-
-                TechnicianId =
-                    technician.EmployeeId
+                ServiceRequestId = request.ServiceRequestId,
+                Diagnosis = diagnosis,
+                RepairDescription = repairDescription,
+                Status = "Pending",
+                StartDate = null,
+                EndDate = null,
+                TechnicianId = technician.EmployeeId
             };
 
             db.Repairs.Add(repair);
 
-            // ==========================================
-            // UPDATE SERVICE REQUEST
-            // ==========================================
-
-            serviceRequest.Status =
-                "In Repair";
+            serviceRequest.Status = "In Repair";
 
             await db.SaveChangesAsync();
-
-            // ==========================================
-            // REFRESH LISTS
-            // ==========================================
 
             await LoadServiceRequestsAsync();
             await LoadRepairsAsync();
@@ -527,27 +567,20 @@ public sealed partial class RepairManagementPage : Page
                 ex.Message);
         }
     }
-    private async Task ShowMessageAsync(
-    string title,
-    string message)
-    {
-        var dialog = new ContentDialog
-        {
-            Title = title,
-            Content = message,
-            CloseButtonText = "OK",
-            XamlRoot = XamlRoot
-        };
 
-        await dialog.ShowAsync();
-    }
+
+    // ==========================================
+    // LOAD ACTIVE REPAIRS
+    // ==========================================
+
     private async Task LoadRepairsAsync()
     {
         try
         {
             if (CurrentUser.CompanyId == null)
             {
-                RepairList.ItemsSource = null;
+                _repairs = new();
+                UpdateRepairPagination();
                 return;
             }
 
@@ -565,8 +598,7 @@ public sealed partial class RepairManagementPage : Page
                         .ThenInclude(sr => sr.Device)
                             .ThenInclude(d => d.Customer)
                     .Include(r => r.Technician)
-                    .Where(r =>
-                        r.Status != "Completed");
+                    .Where(r => r.Status != "Completed");
 
             if (branchManagementEnabled)
             {
@@ -575,7 +607,8 @@ public sealed partial class RepairManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    RepairList.ItemsSource = null;
+                    _repairs = new();
+                    UpdateRepairPagination();
                     return;
                 }
 
@@ -584,33 +617,84 @@ public sealed partial class RepairManagementPage : Page
                     currentBranchId.Value);
             }
 
-            var repairs =
+            _repairs =
                 await query
                     .OrderByDescending(r => r.RepairId)
                     .ToListAsync();
 
-            RepairList.ItemsSource = repairs;
+            _repairPage = 1;
 
-            System.Diagnostics.Debug.WriteLine(
-                branchManagementEnabled
-                    ? $"Loaded {repairs.Count} repair(s) with branch filtering."
-                    : $"Loaded {repairs.Count} repair(s) without branch filtering.");
+            UpdateRepairPagination();
         }
         catch (Exception ex)
         {
-            RepairList.ItemsSource = null;
+            _repairs = new();
+            UpdateRepairPagination();
 
             System.Diagnostics.Debug.WriteLine(
                 "Failed to load repairs: " + ex);
         }
     }
+
+
+    private void UpdateRepairPagination()
+    {
+        var totalPages =
+            Math.Max(1, (int)Math.Ceiling(
+                (double)_repairs.Count / _pageSize));
+
+        if (_repairPage > totalPages) _repairPage = totalPages;
+        if (_repairPage < 1) _repairPage = 1;
+
+        var paged =
+            _repairs
+                .Skip((_repairPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        RepairList.ItemsSource = paged;
+
+        RepairPageInfoText.Text =
+            $"Page {_repairPage} of {totalPages}  •  " +
+            $"{_repairs.Count} total";
+
+        PreviousRepairPageButton.IsEnabled = _repairPage > 1;
+        NextRepairPageButton.IsEnabled = _repairPage < totalPages;
+    }
+
+    private void PreviousRepairPageButton_Click(
+        object sender, RoutedEventArgs e)
+    {
+        if (_repairPage <= 1) return;
+        _repairPage--;
+        UpdateRepairPagination();
+    }
+
+    private void NextRepairPageButton_Click(
+        object sender, RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(1, (int)Math.Ceiling(
+                (double)_repairs.Count / _pageSize));
+
+        if (_repairPage >= totalPages) return;
+        _repairPage++;
+        UpdateRepairPagination();
+    }
+
+
+    // ==========================================
+    // LOAD REPAIR HISTORY
+    // ==========================================
+
     private async Task LoadRepairHistoryAsync()
     {
         try
         {
             if (CurrentUser.CompanyId == null)
             {
-                RepairHistoryList.ItemsSource = null;
+                _repairHistory = new();
+                UpdateHistoryPagination();
                 return;
             }
 
@@ -628,8 +712,7 @@ public sealed partial class RepairManagementPage : Page
                         .ThenInclude(sr => sr.Device)
                             .ThenInclude(d => d.Customer)
                     .Include(r => r.Technician)
-                    .Where(r =>
-                        r.Status == "Completed");
+                    .Where(r => r.Status == "Completed");
 
             if (branchManagementEnabled)
             {
@@ -638,7 +721,8 @@ public sealed partial class RepairManagementPage : Page
 
                 if (currentBranchId == null)
                 {
-                    RepairHistoryList.ItemsSource = null;
+                    _repairHistory = new();
+                    UpdateHistoryPagination();
                     return;
                 }
 
@@ -647,26 +731,75 @@ public sealed partial class RepairManagementPage : Page
                     currentBranchId.Value);
             }
 
-            var history =
+            _repairHistory =
                 await query
-                    .OrderByDescending(r => r.EndDate)
+                    .OrderByDescending(r => r.RepairId)
                     .ToListAsync();
 
-            RepairHistoryList.ItemsSource = history;
+            _historyPage = 1;
 
-            System.Diagnostics.Debug.WriteLine(
-                branchManagementEnabled
-                    ? $"Loaded {history.Count} completed repair(s) with branch filtering."
-                    : $"Loaded {history.Count} completed repair(s) without branch filtering.");
+            UpdateHistoryPagination();
         }
         catch (Exception ex)
         {
-            RepairHistoryList.ItemsSource = null;
+            _repairHistory = new();
+            UpdateHistoryPagination();
 
             System.Diagnostics.Debug.WriteLine(
                 "Failed to load repair history: " + ex);
         }
     }
+
+
+    private void UpdateHistoryPagination()
+    {
+        var totalPages =
+            Math.Max(1, (int)Math.Ceiling(
+                (double)_repairHistory.Count / _pageSize));
+
+        if (_historyPage > totalPages) _historyPage = totalPages;
+        if (_historyPage < 1) _historyPage = 1;
+
+        var paged =
+            _repairHistory
+                .Skip((_historyPage - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToList();
+
+        RepairHistoryList.ItemsSource = paged;
+
+        HistoryPageInfoText.Text =
+            $"Page {_historyPage} of {totalPages}  •  " +
+            $"{_repairHistory.Count} total";
+
+        PreviousHistoryPageButton.IsEnabled = _historyPage > 1;
+        NextHistoryPageButton.IsEnabled = _historyPage < totalPages;
+    }
+
+    private void PreviousHistoryPageButton_Click(
+        object sender, RoutedEventArgs e)
+    {
+        if (_historyPage <= 1) return;
+        _historyPage--;
+        UpdateHistoryPagination();
+    }
+
+    private void NextHistoryPageButton_Click(
+        object sender, RoutedEventArgs e)
+    {
+        var totalPages =
+            Math.Max(1, (int)Math.Ceiling(
+                (double)_repairHistory.Count / _pageSize));
+
+        if (_historyPage >= totalPages) return;
+        _historyPage++;
+        UpdateHistoryPagination();
+    }
+
+
+    // ==========================================
+    // REPAIR WORKSPACE
+    // ==========================================
 
     private async Task ShowRepairWorkspaceAsync(
         int repairId)
@@ -683,9 +816,7 @@ public sealed partial class RepairManagementPage : Page
                     CurrentUser.CompanyId.Value);
 
             // ==========================================
-            // GET CURRENT EMPLOYEE (still needed for
-            // ownership record when creating RepairItems
-            // and identity checks)
+            // GET CURRENT EMPLOYEE
             // ==========================================
 
             var technician =
@@ -873,7 +1004,9 @@ public sealed partial class RepairManagementPage : Page
             var repairItemsList =
                 new ListView
                 {
-                    Height = 220
+                    Height = 220,
+                    SelectionMode =
+                        ListViewSelectionMode.None
                 };
 
             var repairItemsHeader =
@@ -1707,272 +1840,11 @@ public sealed partial class RepairManagementPage : Page
         }
     }
 
-    private async Task AddRepairItemAsync(
-        int repairId,
-        ListView repairItemsList)
-    {
-        try
-        {
-            if (CurrentUser.CompanyId == null)
-            {
-                return;
-            }
 
-            await using var db =
-                await _tenantDbFactory.CreateAsync(
-                    CurrentUser.CompanyId.Value);
+    // ==========================================
+    // OPEN REPAIR
+    // ==========================================
 
-            var branchManagementEnabled =
-                await HasBranchManagementAsync();
-
-            // Load inventory with available stock
-            var inventoryQuery =
-                db.Inventories
-                    .AsNoTracking()
-                    .Include(x => x.Item)
-                    .Where(x => x.QuantityOnHand > 0);
-
-            if (branchManagementEnabled)
-            {
-                var currentBranchId =
-                    _currentBranchContext.BranchId;
-
-                if (currentBranchId == null)
-                {
-                    await ShowMessageAsync(
-                        "Branch Not Selected",
-                        "Please select a branch from the global branch selector.");
-
-                    return;
-                }
-
-                inventoryQuery = inventoryQuery.Where(x =>
-                    x.BranchId == currentBranchId.Value);
-            }
-
-            var inventory =
-                await inventoryQuery
-                    .OrderBy(x => x.Item!.ItemName)
-                    .ToListAsync();
-
-            if (inventory.Count == 0)
-            {
-                await ShowMessageAsync(
-                    "No Items Available",
-                    "There are currently no inventory items in stock.");
-
-                return;
-            }
-
-            // Item selection
-            var itemBox = new ComboBox
-            {
-                Header = "Inventory Item",
-                ItemsSource = inventory,
-                DisplayMemberPath = "Item.ItemName",
-                SelectedIndex = 0
-            };
-
-            // Quantity
-            var quantityBox = new NumberBox
-            {
-                Header = "Quantity",
-                Value = 1,
-                Minimum = 0.01,
-                SmallChange = 1
-            };
-
-            // Discount
-            var discountBox = new NumberBox
-            {
-                Header = "Discount",
-                Value = 0,
-                Minimum = 0,
-                SmallChange = 10
-            };
-
-            // Available stock label
-            var stockText =
-                new TextBlock
-                {
-                    Opacity = 0.7
-                };
-
-            void UpdateStockText()
-            {
-                if (itemBox.SelectedItem is Inventory selectedInventory)
-                {
-                    stockText.Text =
-                        $"Available stock: " +
-                        $"{selectedInventory.QuantityOnHand}";
-                }
-                else
-                {
-                    stockText.Text =
-                        "Available stock: 0";
-                }
-            }
-
-            itemBox.SelectionChanged += (_, _) =>
-            {
-                UpdateStockText();
-            };
-
-            UpdateStockText();
-
-            var content =
-                new StackPanel
-                {
-                    Spacing = 12
-                };
-
-            content.Children.Add(itemBox);
-            content.Children.Add(stockText);
-            content.Children.Add(quantityBox);
-            content.Children.Add(discountBox);
-
-            var dialog =
-                new ContentDialog
-                {
-                    Title = "Add Repair Item",
-                    Content = content,
-
-                    PrimaryButtonText = "Add",
-                    CloseButtonText = "Cancel",
-
-                    DefaultButton =
-                        ContentDialogButton.Primary,
-
-                    XamlRoot = XamlRoot
-                };
-
-            var result =
-                await dialog.ShowAsync();
-
-            if (result !=
-                ContentDialogResult.Primary)
-            {
-                return;
-            }
-
-            if (itemBox.SelectedItem is not Inventory inventoryRecord)
-            {
-                await ShowMessageAsync(
-                    "Invalid Item",
-                    "Please select an inventory item.");
-
-                return;
-            }
-
-            if (double.IsNaN(quantityBox.Value) ||
-                quantityBox.Value <= 0)
-            {
-                await ShowMessageAsync(
-                    "Invalid Quantity",
-                    "Quantity must be greater than zero.");
-
-                return;
-            }
-
-            if (double.IsNaN(discountBox.Value) ||
-                discountBox.Value < 0)
-            {
-                await ShowMessageAsync(
-                    "Invalid Discount",
-                    "Discount cannot be negative.");
-
-                return;
-            }
-
-            var quantity =
-                (decimal)quantityBox.Value;
-
-            var discount =
-                (decimal)discountBox.Value;
-
-            // Check stock
-            if (quantity >
-                inventoryRecord.QuantityOnHand)
-            {
-                await ShowMessageAsync(
-                    "Insufficient Stock",
-                    $"Only {inventoryRecord.QuantityOnHand} " +
-                    $"unit(s) are available.");
-
-                return;
-            }
-
-            // Create RepairItem
-            var repairItem =
-                new RepairItem
-                {
-                    RepairId =
-                        repairId,
-
-                    ItemId =
-                        inventoryRecord.ItemId,
-
-                    Quantity =
-                        quantity,
-
-                    UnitPrice =
-                        inventoryRecord.Item!.UnitPrice,
-
-                    Discount =
-                        discount
-                };
-
-            db.RepairItems.Add(
-                repairItem);
-
-            // Reduce inventory stock
-            inventoryRecord.QuantityOnHand -=
-                quantity;
-
-            // We are tracking the inventory record
-            // separately, so attach/update it.
-            db.Inventories.Update(
-                inventoryRecord);
-
-            await db.SaveChangesAsync();
-
-            // Reload repair items
-            var updatedItems =
-                await db.RepairItems
-                    .AsNoTracking()
-                    .Include(ri => ri.Item)
-                    .Where(ri =>
-                        ri.RepairId == repairId)
-                    .Select(ri => new
-                    {
-                        ri.RepairItemId,
-
-                        ItemName =
-                            ri.Item!.ItemName,
-
-                        ri.Quantity,
-
-                        ri.UnitPrice,
-
-                        ri.Discount
-                    })
-                    .ToListAsync();
-
-            repairItemsList.ItemsSource =
-                updatedItems;
-
-            await ShowMessageAsync(
-                "Item Added",
-                $"{inventoryRecord.Item!.ItemName} " +
-                $"was added to the repair.");
-        }
-        catch (Exception ex)
-        {
-            await ShowMessageAsync(
-                "Unable to Add Item",
-                ex.Message);
-        }
-    }
     private async void OpenRepairButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -1987,4 +1859,23 @@ public sealed partial class RepairManagementPage : Page
             repair.RepairId);
     }
 
+
+    // ==========================================
+    // MESSAGE
+    // ==========================================
+
+    private async Task ShowMessageAsync(
+        string title,
+        string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = XamlRoot
+        };
+
+        await dialog.ShowAsync();
+    }
 }

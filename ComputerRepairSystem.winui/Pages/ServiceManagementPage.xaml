@@ -6,501 +6,591 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <ScrollViewer>
-        <Grid Padding="32">
+    <Page.Resources>
+        <!-- Subtle divider line for table rows -->
+        <SolidColorBrush
+            x:Key="RowDividerBrush"
+            Color="#22808080"/>
 
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <!-- Card background for form sections -->
+        <SolidColorBrush
+            x:Key="CardBackgroundBrush"
+            Color="#0F808080"/>
+    </Page.Resources>
 
+    <Grid
+        Padding="32"
+        RowSpacing="20">
 
-            <!-- ====================================== -->
-            <!-- HEADER -->
-            <!-- ====================================== -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <StackPanel
-                Grid.Row="0"
-                Spacing="6">
+
+        <!-- ====================================== -->
+        <!-- HEADER -->
+        <!-- ====================================== -->
+
+        <StackPanel
+            Grid.Row="0"
+            Spacing="6">
+
+            <TextBlock
+                Text="Service Management"
+                FontSize="32"
+                FontWeight="SemiBold"/>
+
+            <TextBlock
+                Text="Register customers, devices, and service requests."
+                Opacity="0.7"/>
+
+        </StackPanel>
+
+
+        <!-- ====================================== -->
+        <!-- MAIN LAYOUT -->
+        <!-- ====================================== -->
+
+        <Grid
+            Grid.Row="1"
+            ColumnSpacing="24">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" MinWidth="380"/>
+                <ColumnDefinition Width="2*" MinWidth="360"/>
+            </Grid.ColumnDefinitions>
+
+
+            <!-- ================================== -->
+            <!-- LEFT — FORM (scrollable) -->
+            <!-- ================================== -->
+
+            <ScrollViewer
+                Grid.Column="0"
+                VerticalScrollBarVisibility="Auto">
+
+                <StackPanel
+                    Spacing="20">
+
+
+                    <!-- ============================== -->
+                    <!-- CUSTOMER INFORMATION CARD -->
+                    <!-- ============================== -->
+
+                    <Border
+                        Background="{StaticResource CardBackgroundBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{StaticResource RowDividerBrush}"
+                        CornerRadius="8"
+                        Padding="16">
+
+                        <StackPanel Spacing="12">
+
+                            <TextBlock
+                                Text="Customer Information"
+                                FontSize="18"
+                                FontWeight="SemiBold"/>
+
+                            <Grid
+                                RowSpacing="12"
+                                ColumnSpacing="12">
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
 
-                <TextBlock
-                    Text="Service Management"
-                    FontSize="32"
-                    FontWeight="SemiBold"/>
-
-                <TextBlock
-                    Text="Register customers, devices, and service requests."
-                    Opacity="0.7"/>
-
-            </StackPanel>
-
-
-            <!-- ====================================== -->
-            <!-- MAIN FORM -->
-            <!-- ====================================== -->
-
-            <Grid
-                Grid.Row="1"
-                Margin="0,24,0,0">
-
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="3*"/>
-                </Grid.ColumnDefinitions>
-
-
-                <!-- ================================== -->
-                <!-- LEFT SIDE: FORM -->
-                <!-- ================================== -->
-
-                <ScrollViewer
-                    Grid.Column="0"
-                    Margin="0,0,24,0">
-
-                    <StackPanel
-                        Spacing="16">
-
-
-                        <!-- ============================== -->
-                        <!-- CUSTOMER INFORMATION -->
-                        <!-- ============================== -->
-
-                        <TextBlock
-                            Text="Customer Information"
-                            FontSize="20"
-                            FontWeight="SemiBold"/>
-
-                        <Grid>
-
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-
-                            <!-- First Name -->
-
-                            <TextBox
-                                x:Name="FirstNameBox"
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Header="First Name"
-                                Margin="0,0,8,12"/>
-
-
-                            <!-- Middle Name -->
-
-                            <TextBox
-                                x:Name="MiddleNameBox"
-                                Grid.Row="0"
-                                Grid.Column="1"
-                                Header="Middle Name"
-                                Margin="8,0,0,12"/>
-
-
-                            <!-- Last Name -->
-
-                            <TextBox
-                                x:Name="LastNameBox"
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Header="Last Name"
-                                Margin="0,0,8,12"/>
-
-
-                            <!-- Phone -->
-
-                            <TextBox
-                                x:Name="PhoneBox"
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                Header="Phone"
-                                Margin="8,0,0,12"/>
-
-
-                            <!-- Email -->
-
-                            <TextBox
-                                x:Name="EmailBox"
-                                Grid.Row="2"
-                                Grid.Column="0"
-                                Header="Email"
-                                Margin="0,0,8,0"/>
-
-
-                            <!-- Address -->
-
-                            <TextBox
-                                x:Name="AddressBox"
-                                Grid.Row="2"
-                                Grid.Column="1"
-                                Header="Address"
-                                Margin="8,0,0,0"/>
-
-                        </Grid>
-
-
-                        <!-- ============================== -->
-                        <!-- DEVICE INFORMATION -->
-                        <!-- ============================== -->
-
-                        <TextBlock
-                            Text="Device Information"
-                            FontSize="20"
-                            FontWeight="SemiBold"
-                            Margin="0,12,0,0"/>
-
-                        <Grid>
-
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-
-                            <!-- Device Type -->
-
-                            <TextBox
-                                x:Name="DeviceTypeBox"
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Header="Device Type"
-                                Margin="0,0,8,12"/>
-
-
-                            <!-- Brand -->
-
-                            <TextBox
-                                x:Name="BrandBox"
-                                Grid.Row="0"
-                                Grid.Column="1"
-                                Header="Brand"
-                                Margin="8,0,0,12"/>
-
-
-                            <!-- Model -->
-
-                            <TextBox
-                                x:Name="ModelBox"
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Header="Model"
-                                Margin="0,0,8,12"/>
-
-
-                            <!-- Serial Number -->
-
-                            <TextBox
-                                x:Name="SerialNumberBox"
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                Header="Serial Number"
-                                Margin="8,0,0,12"/>
-
-
-                            <!-- Device Condition -->
-
-                            <TextBox
-                                x:Name="DeviceConditionBox"
-                                Grid.Row="2"
-                                Grid.ColumnSpan="2"
-                                Header="Device Condition"
-                                Margin="0,0,0,12"/>
-
-                        </Grid>
-
-
-                        <!-- ============================== -->
-                        <!-- SERVICE REQUEST -->
-                        <!-- ============================== -->
-
-                        <TextBlock
-                            Text="Service Request"
-                            FontSize="20"
-                            FontWeight="SemiBold"
-                            Margin="0,12,0,0"/>
-
-
-                        <!-- Description -->
-
-                        <TextBox
-                            x:Name="DescriptionBox"
-                            Header="Description"
-                            PlaceholderText="Describe the customer's reported problem..."
-                            AcceptsReturn="True"
-                            TextWrapping="Wrap"
-                            MinHeight="100"/>
-
-
-                        <!-- Priority -->
-
-                        <ComboBox
-                            x:Name="PriorityBox"
-                            Header="Priority"
-                            SelectedIndex="1">
-
-                            <ComboBoxItem
-                                Content="Low"/>
-
-                            <ComboBoxItem
-                                Content="Medium"/>
-
-                            <ComboBoxItem
-                                Content="High"/>
-
-                            <ComboBoxItem
-                                Content="Urgent"/>
-
-                        </ComboBox>
-
-
-                        <!-- Status -->
-
-                        <ComboBox
-                            x:Name="StatusBox"
-                            Header="Status"
-                            SelectedIndex="0">
-
-                            <ComboBoxItem
-                                Content="Pending"/>
-
-                            <ComboBoxItem
-                                Content="Diagnosing"/>
-
-                            <ComboBoxItem
-                                Content="In Repair"/>
-
-                            <ComboBoxItem
-                                Content="Ready for Pickup"/>
-
-                            <ComboBoxItem
-                                Content="Completed"/>
-
-                        </ComboBox>
-
-
-                        <!-- ================================== -->
-                        <!-- ACTION BUTTONS -->
-                        <!-- ================================== -->
-
-                        <StackPanel
-                            Orientation="Horizontal"
-                            Spacing="10"
-                            Margin="0,8,0,16">
-
-                            <Button
-                                x:Name="SubmitRequestButton"
-                                Content="Submit Service Request"
-                                Click="SubmitRequestButton_Click"/>
-
-                            <Button
-                                x:Name="ClearButton"
-                                Content="Clear"
-                                Click="ClearButton_Click"/>
+                                <TextBox
+                                    x:Name="FirstNameBox"
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Header="First Name"/>
+
+                                <TextBox
+                                    x:Name="MiddleNameBox"
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Header="Middle Name"/>
+
+                                <TextBox
+                                    x:Name="LastNameBox"
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Header="Last Name"/>
+
+                                <TextBox
+                                    x:Name="PhoneBox"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Header="Phone"/>
+
+                                <TextBox
+                                    x:Name="EmailBox"
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Header="Email"/>
+
+                                <TextBox
+                                    x:Name="AddressBox"
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Header="Address"/>
+
+                            </Grid>
 
                         </StackPanel>
 
+                    </Border>
 
-                        <!-- STATUS -->
 
-                        <InfoBar
-                            x:Name="StatusBar"
-                            IsOpen="False"/>
+                    <!-- ============================== -->
+                    <!-- DEVICE INFORMATION CARD -->
+                    <!-- ============================== -->
+
+                    <Border
+                        Background="{StaticResource CardBackgroundBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{StaticResource RowDividerBrush}"
+                        CornerRadius="8"
+                        Padding="16">
+
+                        <StackPanel Spacing="12">
+
+                            <TextBlock
+                                Text="Device Information"
+                                FontSize="18"
+                                FontWeight="SemiBold"/>
+
+                            <Grid
+                                RowSpacing="12"
+                                ColumnSpacing="12">
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+
+                                <TextBox
+                                    x:Name="DeviceTypeBox"
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Header="Device Type"/>
+
+                                <TextBox
+                                    x:Name="BrandBox"
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Header="Brand"/>
+
+                                <TextBox
+                                    x:Name="ModelBox"
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Header="Model"/>
+
+                                <TextBox
+                                    x:Name="SerialNumberBox"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Header="Serial Number"/>
+
+                                <TextBox
+                                    x:Name="DeviceConditionBox"
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="2"
+                                    Header="Device Condition"/>
+
+                            </Grid>
+
+                        </StackPanel>
+
+                    </Border>
+
+
+                    <!-- ============================== -->
+                    <!-- SERVICE REQUEST CARD -->
+                    <!-- ============================== -->
+
+                    <Border
+                        Background="{StaticResource CardBackgroundBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{StaticResource RowDividerBrush}"
+                        CornerRadius="8"
+                        Padding="16">
+
+                        <StackPanel Spacing="12">
+
+                            <TextBlock
+                                Text="Service Request"
+                                FontSize="18"
+                                FontWeight="SemiBold"/>
+
+
+                            <TextBox
+                                x:Name="DescriptionBox"
+                                Header="Description"
+                                PlaceholderText="Describe the customer's reported problem..."
+                                AcceptsReturn="True"
+                                TextWrapping="Wrap"
+                                MinHeight="100"/>
+
+
+                            <Grid
+                                ColumnSpacing="12">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+
+                                <ComboBox
+                                    x:Name="PriorityBox"
+                                    Grid.Column="0"
+                                    Header="Priority"
+                                    HorizontalAlignment="Stretch"
+                                    SelectedIndex="1">
+
+                                    <ComboBoxItem Content="Low"/>
+                                    <ComboBoxItem Content="Medium"/>
+                                    <ComboBoxItem Content="High"/>
+                                    <ComboBoxItem Content="Urgent"/>
+
+                                </ComboBox>
+
+
+                                <ComboBox
+                                    x:Name="StatusBox"
+                                    Grid.Column="1"
+                                    Header="Status"
+                                    HorizontalAlignment="Stretch"
+                                    SelectedIndex="0">
+
+                                    <ComboBoxItem Content="Pending"/>
+                                    <ComboBoxItem Content="Diagnosing"/>
+                                    <ComboBoxItem Content="In Repair"/>
+                                    <ComboBoxItem Content="Ready for Pickup"/>
+                                    <ComboBoxItem Content="Completed"/>
+
+                                </ComboBox>
+
+                            </Grid>
+
+                        </StackPanel>
+
+                    </Border>
+
+
+                    <!-- ============================== -->
+                    <!-- ACTION BUTTONS -->
+                    <!-- ============================== -->
+
+                    <StackPanel
+                        Orientation="Horizontal"
+                        Spacing="10"
+                        HorizontalAlignment="Right">
+
+                        <Button
+                            x:Name="ClearButton"
+                            Click="ClearButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <SymbolIcon Symbol="Clear"/>
+                                <TextBlock Text="Clear" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button
+                            x:Name="SubmitRequestButton"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Click="SubmitRequestButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <SymbolIcon Symbol="Accept"/>
+                                <TextBlock Text="Submit Service Request" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                     </StackPanel>
 
-                </ScrollViewer>
+
+                    <!-- ============================== -->
+                    <!-- STATUS BAR -->
+                    <!-- ============================== -->
+
+                    <InfoBar
+                        x:Name="StatusBar"
+                        IsOpen="False"/>
+
+                </StackPanel>
+
+            </ScrollViewer>
 
 
-                <!-- ================================== -->
-                <!-- RIGHT SIDE: CUSTOMERS -->
-                <!-- ================================== -->
+            <!-- ================================== -->
+            <!-- RIGHT — CUSTOMER TABLE -->
+            <!-- ================================== -->
 
-                <Border
-                    Grid.Column="1"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="12">
+            <Border
+                Grid.Column="1"
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderThickness="1"
+                BorderBrush="{StaticResource RowDividerBrush}"
+                CornerRadius="8"
+                Padding="16">
 
-                                    <StackPanel
-                        Spacing="12">
+                <Grid
+                    RowSpacing="12">
 
-                                        <TextBlock
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+
+                    <!-- ============================== -->
+                    <!-- TABLE HEADER TEXT -->
+                    <!-- ============================== -->
+
+                    <StackPanel
+                        Grid.Row="0"
+                        Spacing="4">
+
+                        <TextBlock
                             Text="Customers"
-                            FontSize="20"
+                            FontSize="18"
                             FontWeight="SemiBold"/>
 
-                                        <TextBlock
-                            Text="Search for an existing customer."
+                        <TextBlock
+                            Text="Search or select an existing customer."
                             Opacity="0.7"/>
 
-                                <StackPanel
-                            Orientation="Horizontal"
-                            Spacing="8">
+                    </StackPanel>
 
-                                    <TextBox
-                                x:Name="CustomerSearchBox"
-                                PlaceholderText="Search customer name..."
-                                Width="280"
-                                TextChanged="CustomerSearchBox_TextChanged"/>
 
-                                    <Button
-                                Content="New Customer"
-                                Click="NewCustomerButton_Click"/>
+                    <!-- ============================== -->
+                    <!-- SEARCH + NEW CUSTOMER -->
+                    <!-- ============================== -->
 
-                                </StackPanel>  
+                    <Grid
+                        Grid.Row="1"
+                        ColumnSpacing="8">
 
-                    
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+
+                        <TextBox
+                            x:Name="CustomerSearchBox"
+                            Grid.Column="0"
+                            PlaceholderText="Search customer name..."
+                            TextChanged="CustomerSearchBox_TextChanged"/>
+
+
+                        <Button
+                            Grid.Column="1"
+                            Click="NewCustomerButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <SymbolIcon Symbol="Add"/>
+                                <TextBlock Text="New Customer" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                    </Grid>
+
+
+                    <!-- ============================== -->
+                    <!-- CUSTOMER TABLE -->
+                    <!-- ============================== -->
+
+                    <Border
+                        Grid.Row="2"
+                        BorderThickness="1"
+                        BorderBrush="{StaticResource RowDividerBrush}"
+                        CornerRadius="6">
+
+                        <ListView
+                            x:Name="CustomerList"
+                            SelectionMode="Single"
+                            SelectionChanged="CustomerList_SelectionChanged">
+
+                            <ListView.Header>
+
                                 <Border
-                                    BorderThickness="1"
-                                    CornerRadius="8">
+                                    BorderBrush="{StaticResource RowDividerBrush}"
+                                    BorderThickness="0,0,0,1">
 
-                                    <StackPanel>
+                                    <Grid
+                                        Padding="12,10">
 
-                                        <!-- CUSTOMER TABLE -->
-
-                                        <ListView
-                                            x:Name="CustomerList"
-                                            MaxHeight="450"
-                                            SelectionChanged="CustomerList_SelectionChanged">
-
-                                            <ListView.Header>
-
-                                                <Grid Padding="8">
-
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="2*"/>
-                                                        <ColumnDefinition Width="2*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="2*"/>
-                                                        <ColumnDefinition Width="90"/>
-                                                    </Grid.ColumnDefinitions>
-
-                                                    <TextBlock
-                                                        Grid.Column="0"
-                                                        Text="First Name"
-                                                        FontWeight="SemiBold"/>
-
-                                                    <TextBlock
-                                                        Grid.Column="1"
-                                                        Text="Last Name"
-                                                        FontWeight="SemiBold"/>
-
-                                                    <TextBlock
-                                                        Grid.Column="2"
-                                                        Text="Phone"
-                                                        FontWeight="SemiBold"/>
-
-                                                    <TextBlock
-                                                        Grid.Column="3"
-                                                        Text="Email"
-                                                        FontWeight="SemiBold"/>
-
-                                                    <TextBlock
-                                                        Grid.Column="4"
-                                                        Text="Action"
-                                                        FontWeight="SemiBold"/>
-
-                                                </Grid>
-
-                                            </ListView.Header>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="2.5*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
 
-                                            <ListView.ItemTemplate>
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="First Name"
+                                            FontWeight="SemiBold"/>
 
-                                                <DataTemplate>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="Last Name"
+                                            FontWeight="SemiBold"/>
 
-                                                    <Grid Padding="8">
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="Phone"
+                                            FontWeight="SemiBold"/>
 
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="2*"/>
-                                                            <ColumnDefinition Width="2*"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="2*"/>
-                                                            <ColumnDefinition Width="90"/>
-                                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            Text="Email"
+                                            FontWeight="SemiBold"/>
 
-                                                        <TextBlock
-                                                            Grid.Column="0"
-                                                            Text="{Binding FirstName}"/>
+                                        <TextBlock
+                                            Grid.Column="4"
+                                            Text="Action"
+                                            FontWeight="SemiBold"
+                                            MinWidth="70"/>
 
-                                                        <TextBlock
-                                                            Grid.Column="1"
-                                                            Text="{Binding LastName}"/>
-
-                                                        <TextBlock
-                                                            Grid.Column="2"
-                                                            Text="{Binding Phone}"
-                                                            TextTrimming="CharacterEllipsis"/>
-
-                                                        <TextBlock
-                                                            Grid.Column="3"
-                                                            Text="{Binding Email}"
-                                                            TextTrimming="CharacterEllipsis"/>
-
-                                                        <Button
-                                                            Grid.Column="4"
-                                                            Content="View"
-                                                            Tag="{Binding}"
-                                                            Click="ViewCustomerButton_Click"/>
-
-                                                    </Grid>
-
-                                                </DataTemplate>
-
-                                            </ListView.ItemTemplate>
-
-                                        </ListView>
-
-
-                                        <!-- PAGINATION -->
-
-                                        <StackPanel
-                                            Orientation="Horizontal"
-                                            HorizontalAlignment="Center"
-                                            Spacing="12"
-                                            Margin="0,12,0,0">
-
-                                            <Button
-                                                x:Name="PreviousPageButton"
-                                                Content="Previous"
-                                                Click="PreviousPageButton_Click"/>
-
-                                            <TextBlock
-                                                x:Name="PageInfoText"
-                                                VerticalAlignment="Center"/>
-
-                                            <Button
-                                                x:Name="NextPageButton"
-                                                Content="Next"
-                                                Click="NextPageButton_Click"/>
-
-                                        </StackPanel>
-
-                                    </StackPanel>
+                                    </Grid>
 
                                 </Border>
 
+                            </ListView.Header>
+
+
+                            <ListView.ItemTemplate>
+
+                                <DataTemplate>
+
+                                    <Border
+                                        BorderBrush="{StaticResource RowDividerBrush}"
+                                        BorderThickness="0,0,0,1">
+
+                                        <Grid
+                                            Padding="12,10">
+
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="2.5*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                Text="{Binding FirstName}"
+                                                VerticalAlignment="Center"
+                                                TextTrimming="CharacterEllipsis"/>
+
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Text="{Binding LastName}"
+                                                VerticalAlignment="Center"
+                                                TextTrimming="CharacterEllipsis"/>
+
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                Text="{Binding Phone}"
+                                                VerticalAlignment="Center"
+                                                TextTrimming="CharacterEllipsis"/>
+
+                                            <TextBlock
+                                                Grid.Column="3"
+                                                Text="{Binding Email}"
+                                                VerticalAlignment="Center"
+                                                TextTrimming="CharacterEllipsis"/>
+
+                                            <Button
+                                                Grid.Column="4"
+                                                Tag="{Binding}"
+                                                MinWidth="70"
+                                                Click="ViewCustomerButton_Click">
+                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <SymbolIcon Symbol="View"/>
+                                                    <TextBlock Text="View" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+
+                                        </Grid>
+
+                                    </Border>
+
+                                </DataTemplate>
+
+                            </ListView.ItemTemplate>
+
+                        </ListView>
+
+                    </Border>
+
+
+                    <!-- ============================== -->
+                    <!-- PAGINATION -->
+                    <!-- ============================== -->
+
+                    <StackPanel
+                        Grid.Row="3"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="12">
+
+                        <Button
+                            x:Name="PreviousPageButton"
+                            Click="PreviousPageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <SymbolIcon Symbol="Back"/>
+                                <TextBlock Text="Previous" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock
+                            x:Name="PageInfoText"
+                            VerticalAlignment="Center"/>
+
+                        <Button
+                            x:Name="NextPageButton"
+                            Click="NextPageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="Next" VerticalAlignment="Center"/>
+                                <SymbolIcon Symbol="Forward"/>
+                            </StackPanel>
+                        </Button>
+
                     </StackPanel>
 
-                </Border>
+                </Grid>
 
-            </Grid>
+            </Border>
 
         </Grid>
-    </ScrollViewer>
+
+    </Grid>
 
 </Page>

@@ -6,6 +6,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
+    <Page.Resources>
+        <!-- Subtle divider line for table rows -->
+        <SolidColorBrush
+            x:Key="RowDividerBrush"
+            Color="#22808080"/>
+    </Page.Resources>
+
     <ScrollViewer
         VerticalScrollBarVisibility="Auto">
 
@@ -65,8 +72,12 @@
                 <Button
                     x:Name="NewItemButton"
                     Grid.Column="1"
-                    Content="+ New Item"
-                    Click="NewItemButton_Click"/>
+                    Click="NewItemButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <SymbolIcon Symbol="Add"/>
+                        <TextBlock Text="New Item" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
 
                 <!-- ADD STOCK -->
@@ -74,8 +85,12 @@
                 <Button
                     x:Name="AddStockButton"
                     Grid.Column="2"
-                    Content="+ Add Stock"
-                    Click="AddStockButton_Click"/>
+                    Click="AddStockButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <SymbolIcon Symbol="Add"/>
+                        <TextBlock Text="Add Stock" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
             </Grid>
 
@@ -83,142 +98,204 @@
             <!-- INVENTORY TABLE -->
 
             <Border
-    Grid.Row="2"
-    BorderThickness="1"
-    CornerRadius="8">
+                Grid.Row="2"
+                BorderThickness="1"
+                CornerRadius="8">
 
-                <ListView
-        x:Name="InventoryList">
+                <Grid>
 
-                    <ListView.Header>
-
-                        <Grid
-                Padding="16,12">
-
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2.5*"/>
-                                <ColumnDefinition Width="1.5*"/>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="1.2*"/>
-                                <ColumnDefinition Width="1.2*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
 
-                            <TextBlock
-                    Grid.Column="0"
-                    Text="Item"
-                    FontWeight="SemiBold"/>
+                    <ListView
+                        x:Name="InventoryList"
+                        Grid.Row="0"
+                        SelectionMode="None">
 
-                            <TextBlock
-                    Grid.Column="1"
-                    Text="Category"
-                    FontWeight="SemiBold"/>
+                        <ListView.Header>
 
-                            <TextBlock
-                    Grid.Column="2"
-                    Text="Brand / Model"
-                    FontWeight="SemiBold"/>
+                            <Border
+                                BorderBrush="{StaticResource RowDividerBrush}"
+                                BorderThickness="0,0,0,1">
 
-                            <TextBlock
-                    Grid.Column="3"
-                    Text="Unit"
-                    FontWeight="SemiBold"/>
+                                <Grid
+                                    Padding="16,12">
 
-                            <TextBlock
-                    Grid.Column="4"
-                    Text="Available"
-                    FontWeight="SemiBold"/>
-
-                            <TextBlock
-                    Grid.Column="5"
-                    Text="Action"
-                    FontWeight="SemiBold"/>
-
-                        </Grid>
-
-                    </ListView.Header>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2.5*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
 
-                    <ListView.ItemTemplate>
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        Text="Item"
+                                        FontWeight="SemiBold"/>
 
-                        <DataTemplate>
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Text="Category"
+                                        FontWeight="SemiBold"/>
 
-                            <Grid
-                    Padding="16,12">
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Text="Brand / Model"
+                                        FontWeight="SemiBold"/>
 
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="2.5*"/>
-                                    <ColumnDefinition Width="1.5*"/>
-                                    <ColumnDefinition Width="2*"/>
-                                    <ColumnDefinition Width="1.2*"/>
-                                    <ColumnDefinition Width="1.2*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                                    <TextBlock
+                                        Grid.Column="3"
+                                        Text="Unit"
+                                        FontWeight="SemiBold"/>
 
+                                    <TextBlock
+                                        Grid.Column="4"
+                                        Text="Available"
+                                        FontWeight="SemiBold"/>
 
-                                <!-- ITEM -->
+                                    <TextBlock
+                                        Grid.Column="5"
+                                        Text="Action"
+                                        FontWeight="SemiBold"/>
 
-                                <TextBlock
-                        Grid.Column="0"
-                        Text="{Binding ItemName}"
-                        VerticalAlignment="Center"
-                        FontWeight="SemiBold"/>
+                                </Grid>
 
+                            </Border>
 
-                                <!-- CATEGORY -->
-
-                                <TextBlock
-                        Grid.Column="1"
-                        Text="{Binding Category}"
-                        VerticalAlignment="Center"/>
-
-
-                                <!-- BRAND / MODEL -->
-
-                                <TextBlock
-                        Grid.Column="2"
-                        VerticalAlignment="Center">
-
-                        <Run Text="{Binding Brand}"/>
-                        <Run Text=" "/>
-                        <Run Text="{Binding Model}"/>
-
-                                </TextBlock>
+                        </ListView.Header>
 
 
-                                <!-- UNIT -->
+                        <ListView.ItemTemplate>
 
-                                <TextBlock
-                        Grid.Column="3"
-                        Text="{Binding Unit}"
-                        VerticalAlignment="Center"/>
+                            <DataTemplate>
+
+                                <Border
+                                    BorderBrush="{StaticResource RowDividerBrush}"
+                                    BorderThickness="0,0,0,1">
+
+                                    <Grid
+                                        Padding="16,12">
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2.5*"/>
+                                            <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
 
-                                <!-- AVAILABLE -->
+                                        <!-- ITEM -->
 
-                                <TextBlock
-                        Grid.Column="4"
-                        Text="{Binding AvailableQuantity}"
-                        VerticalAlignment="Center"
-                        FontWeight="SemiBold"/>
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="{Binding ItemName}"
+                                            VerticalAlignment="Center"
+                                            FontWeight="SemiBold"/>
 
 
-                                <!-- ACTION -->
+                                        <!-- CATEGORY -->
 
-                                <Button
-                        Grid.Column="5"
-                        Content="Edit"
-                        Tag="{Binding}"
-                        Click="EditItemButton_Click"/>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Text="{Binding Category}"
+                                            VerticalAlignment="Center"/>
 
-                            </Grid>
 
-                        </DataTemplate>
+                                        <!-- BRAND / MODEL -->
 
-                    </ListView.ItemTemplate>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center">
 
-                </ListView>
+                                            <Run Text="{Binding Brand}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding Model}"/>
+
+                                        </TextBlock>
+
+
+                                        <!-- UNIT -->
+
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            Text="{Binding Unit}"
+                                            VerticalAlignment="Center"/>
+
+
+                                        <!-- AVAILABLE -->
+
+                                        <TextBlock
+                                            Grid.Column="4"
+                                            Text="{Binding AvailableQuantity}"
+                                            VerticalAlignment="Center"
+                                            FontWeight="SemiBold"/>
+
+
+                                        <!-- ACTION -->
+
+                                        <Button
+                                            Grid.Column="5"
+                                            Tag="{Binding}"
+                                            Click="EditItemButton_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                <SymbolIcon Symbol="Edit"/>
+                                                <TextBlock Text="Edit" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+
+                                    </Grid>
+
+                                </Border>
+
+                            </DataTemplate>
+
+                        </ListView.ItemTemplate>
+
+                    </ListView>
+
+
+                    <!-- PAGINATION -->
+
+                    <StackPanel
+                        Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="12"
+                        Padding="0,12,0,16">
+
+                        <Button
+                            x:Name="PreviousPageButton"
+                            Click="PreviousPageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <SymbolIcon Symbol="Back"/>
+                                <TextBlock Text="Previous" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock
+                            x:Name="PageInfoText"
+                            VerticalAlignment="Center"/>
+
+                        <Button
+                            x:Name="NextPageButton"
+                            Click="NextPageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="Next" VerticalAlignment="Center"/>
+                                <SymbolIcon Symbol="Forward"/>
+                            </StackPanel>
+                        </Button>
+
+                    </StackPanel>
+
+                </Grid>
 
             </Border>
 

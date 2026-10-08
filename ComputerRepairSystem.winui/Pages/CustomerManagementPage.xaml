@@ -4,94 +4,290 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid Padding="24">
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+
+        <!-- HEADER -->
+
         <TextBlock
+            Grid.Row="0"
             Text="Customer Management"
             FontSize="28"
             FontWeight="SemiBold"/>
 
-        <StackPanel
+
+        <!-- TOOLBAR -->
+
+        <Grid
             Grid.Row="1"
-            Orientation="Horizontal"
-            Spacing="12"
-            Margin="0,20,0,16">
+            Margin="0,20,0,16"
+            ColumnSpacing="12">
 
-            <Button
-                Content="+ New Customer"
-                Click="NewCustomerButton_Click"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <Button
-                Content="Edit"
-                Click="EditCustomerButton_Click"/>
-
-            <Button
-                Content="Delete"
-                Click="DeleteCustomerButton_Click"/>
 
             <TextBox
                 x:Name="SearchBox"
-                Width="250"
+                Grid.Column="0"
                 PlaceholderText="Search customer..."
                 TextChanged="SearchBox_TextChanged"/>
+
+
+            <Button
+                Grid.Column="1"
+                Padding="16,8"
+                Click="NewCustomerButton_Click">
+
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+
+                    <SymbolIcon Symbol="Add"/>
+
+                    <TextBlock
+                        Text="New Customer"
+                        VerticalAlignment="Center"/>
+
+                </StackPanel>
+
+            </Button>
+
+        </Grid>
+
+
+        <!-- CUSTOMER LIST -->
+
+        <Border
+            Grid.Row="2"
+            BorderThickness="1"
+            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+            CornerRadius="8">
+
+            <ListView
+                x:Name="CustomerList"
+                SelectionMode="None">
+
+                <ListView.Header>
+
+                    <Border
+                        BorderThickness="0,0,0,1"
+                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
+
+                        <Grid Padding="16,12">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+
+                            <TextBlock
+                                Grid.Column="0"
+                                Text="Name"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="Phone"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Grid.Column="2"
+                                Text="Email"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Grid.Column="3"
+                                Text="Address"
+                                FontWeight="SemiBold"/>
+
+                            <TextBlock
+                                Grid.Column="4"
+                                Text="Action"
+                                FontWeight="SemiBold"
+                                MinWidth="190"/>
+
+                        </Grid>
+
+                    </Border>
+
+                </ListView.Header>
+
+
+                <ListView.ItemTemplate>
+
+                    <DataTemplate>
+
+                        <Border
+                            BorderThickness="0,0,0,1"
+                            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
+
+                            <Grid Padding="16,12">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+
+                                <TextBlock
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis">
+
+                                    <Run Text="{Binding FirstName}"/>
+                                    <Run Text=" "/>
+                                    <Run Text="{Binding LastName}"/>
+
+                                </TextBlock>
+
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="{Binding Phone}"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="{Binding Email}"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis"/>
+
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="{Binding Address}"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis"/>
+
+
+                                <StackPanel
+                                    Grid.Column="4"
+                                    Orientation="Horizontal"
+                                    Spacing="6"
+                                    VerticalAlignment="Center">
+
+                                    <Button
+                                        Tag="{Binding}"
+                                        Click="EditCustomerButton_Click">
+
+                                        <StackPanel
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            VerticalAlignment="Center">
+
+                                            <SymbolIcon Symbol="Edit"/>
+
+                                            <TextBlock
+                                                Text="Edit"
+                                                VerticalAlignment="Center"/>
+
+                                        </StackPanel>
+
+                                    </Button>
+
+                                    <Button
+                                        Tag="{Binding}"
+                                        Click="DeleteCustomerButton_Click">
+
+                                        <StackPanel
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            VerticalAlignment="Center">
+
+                                            <SymbolIcon Symbol="Delete"/>
+
+                                            <TextBlock
+                                                Text="Delete"
+                                                VerticalAlignment="Center"/>
+
+                                        </StackPanel>
+
+                                    </Button>
+
+                                </StackPanel>
+
+                            </Grid>
+
+                        </Border>
+
+                    </DataTemplate>
+
+                </ListView.ItemTemplate>
+
+            </ListView>
+
+        </Border>
+
+
+        <!-- PAGINATION -->
+
+        <StackPanel
+            Grid.Row="3"
+            Orientation="Horizontal"
+            HorizontalAlignment="Center"
+            Spacing="12"
+            Margin="0,16,0,0">
+
+            <Button
+                x:Name="PreviousPageButton"
+                Click="PreviousPageButton_Click">
+
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+
+                    <SymbolIcon Symbol="Back"/>
+
+                    <TextBlock
+                        Text="Previous"
+                        VerticalAlignment="Center"/>
+
+                </StackPanel>
+
+            </Button>
+
+            <TextBlock
+                x:Name="PageInfoText"
+                VerticalAlignment="Center"/>
+
+            <Button
+                x:Name="NextPageButton"
+                Click="NextPageButton_Click">
+
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center">
+
+                    <TextBlock
+                        Text="Next"
+                        VerticalAlignment="Center"/>
+
+                    <SymbolIcon Symbol="Forward"/>
+
+                </StackPanel>
+
+            </Button>
+
         </StackPanel>
 
-        <ListView
-            x:Name="CustomerList"
-            Grid.Row="2"
-            SelectionChanged="CustomerList_SelectionChanged">
-
-            <ListView.Header>
-                <Grid Padding="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="2*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Text="Name"/>
-                    <TextBlock Grid.Column="1" Text="Phone"/>
-                    <TextBlock Grid.Column="2" Text="Email"/>
-                    <TextBlock Grid.Column="3" Text="Address"/>
-                </Grid>
-            </ListView.Header>
-
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Grid Padding="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="2*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock>
-                            <Run Text="{Binding FirstName}"/>
-                            <Run Text=" "/>
-                            <Run Text="{Binding LastName}"/>
-                        </TextBlock>
-
-                        <TextBlock
-                            Grid.Column="1"
-                            Text="{Binding Phone}"/>
-
-                        <TextBlock
-                            Grid.Column="2"
-                            Text="{Binding Email}"/>
-
-                        <TextBlock
-                            Grid.Column="3"
-                            Text="{Binding Address}"/>
-                    </Grid>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-
-        </ListView>
     </Grid>
+
 </Page>
