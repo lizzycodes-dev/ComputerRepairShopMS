@@ -1310,6 +1310,7 @@ All rights reserved unless otherwise specified by the project authors.
 
 # System Evaluation Results
 <img width="1152" height="2048" alt="eval1" src="https://github.com/user-attachments/assets/162f59ba-ef8b-44a9-88f2-d1ccb5ba1c1c" />
-<img width="1152" height="2048" alt="eval1c" src="https://github.com/user-attachments/assets/4cf25c51-b5ca-453b-a813-9f673d7f3f6c" />
+<img width="1152" height="1649" alt="eval1c" src="https://github.com/user-attachments/assets/5b20a95d-f296-4f4d-9820-6642cbd48fad" />
+
 
 
