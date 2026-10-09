@@ -1305,3 +1305,11 @@ All rights reserved unless otherwise specified by the project authors.
 **Computer Repair Shop Enterprise Resource Planning System**
 
 > Manage. Repair. Track. Grow.
+
+---
+
+# System Evaluation Results
+<img width="1152" height="2048" alt="eval1" src="https://github.com/user-attachments/assets/162f59ba-ef8b-44a9-88f2-d1ccb5ba1c1c" />
+<img width="1152" height="2048" alt="eval1c" src="https://github.com/user-attachments/assets/4cf25c51-b5ca-453b-a813-9f673d7f3f6c" />
+
+
