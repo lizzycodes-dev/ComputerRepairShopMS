@@ -195,12 +195,14 @@
 
 
                     <!-- SERVICE MANAGEMENT -->
-                    <NavigationViewItem
-                    x:Name="ServiceManagementItem"
-                    Content="Service Management"
-                    Tag="customers">
+                    <NavigationViewItem 
+                        x:Name="ServiceManagementItem" 
+                        Content="Service Management" 
+                        Tag="customers">
                         <NavigationViewItem.Icon>
-                            <SymbolIcon Symbol="Contact"/>
+                            <FontIcon 
+                                FontFamily="Segoe MDL2 Assets" 
+                                Glyph="&#xE9D5;"/>
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 

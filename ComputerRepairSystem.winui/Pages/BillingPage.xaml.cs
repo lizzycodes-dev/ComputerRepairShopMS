@@ -14,7 +14,7 @@ public sealed partial class BillingPage : Page
     private readonly TenantDbContextFactory _tenantDbFactory;
     private readonly MasterErpDbContext _masterDb;
     private readonly CurrentBranchContext _currentBranchContext;
-
+    private List<BillingRow> _filteredRows = new();
     // ==========================================
     // PAGINATION STATE
     // ==========================================
@@ -123,12 +123,6 @@ public sealed partial class BillingPage : Page
                     .Where(r =>
                         r.Status == "Completed" &&
                         r.Invoice == null)
-                    .Include(r =>
-                        r.ServiceRequest)
-                        .ThenInclude(sr =>
-                            sr.Device)
-                        .ThenInclude(d =>
-                            d.Customer)
                     .AsQueryable();
 
             if (branchManagementEnabled)
@@ -183,13 +177,14 @@ public sealed partial class BillingPage : Page
 
                         RepairDescription =
                             r.RepairDescription ??
-                            "No description"
+                            "No description",
+
+                        // ⬇⬇⬇ NEW
+                        CompletedDate = r.EndDate
                     })
                     .ToListAsync();
 
-            _currentPage = 1;
-
-            UpdatePagination();
+            ApplyFilter();
         }
         catch (Exception ex)
         {
@@ -212,7 +207,7 @@ public sealed partial class BillingPage : Page
             Math.Max(
                 1,
                 (int)Math.Ceiling(
-                    (double)_billingRows.Count /
+                    (double)_filteredRows.Count /
                     _pageSize));
 
         if (_currentPage > totalPages)
@@ -222,7 +217,7 @@ public sealed partial class BillingPage : Page
             _currentPage = 1;
 
         var pagedRows =
-            _billingRows
+            _filteredRows
                 .Skip((_currentPage - 1) * _pageSize)
                 .Take(_pageSize)
                 .ToList();
@@ -231,12 +226,11 @@ public sealed partial class BillingPage : Page
 
         PageInfoText.Text =
             $"Page {_currentPage} of {totalPages}  •  " +
-            $"{_billingRows.Count} total";
+            $"{_filteredRows.Count} total";
 
         PreviousPageButton.IsEnabled = _currentPage > 1;
         NextPageButton.IsEnabled = _currentPage < totalPages;
     }
-
 
     private void PreviousPageButton_Click(
         object sender,
@@ -259,13 +253,114 @@ public sealed partial class BillingPage : Page
             Math.Max(
                 1,
                 (int)Math.Ceiling(
-                    (double)_billingRows.Count /
+                    (double)_filteredRows.Count /
                     _pageSize));
 
         if (_currentPage >= totalPages)
             return;
 
         _currentPage++;
+
+        UpdatePagination();
+    }
+
+    // ==========================================
+    // FILTER (SEARCH + DATE RANGE)
+    // ==========================================
+
+    private void SearchBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        ApplyFilter();
+    }
+
+
+    private void DateFilter_DateChanged(
+        CalendarDatePicker sender,
+        CalendarDatePickerDateChangedEventArgs args)
+    {
+        ApplyFilter();
+    }
+
+
+    private void ClearFilterButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SearchBox.Text = string.Empty;
+        StartDatePicker.Date = null;
+        EndDatePicker.Date = null;
+
+        ApplyFilter();
+    }
+
+
+    private void ApplyFilter()
+    {
+        var search =
+            SearchBox.Text?.Trim() ?? string.Empty;
+
+        var startDate =
+            StartDatePicker.Date?.Date;
+
+        var endDate =
+            EndDatePicker.Date?.Date;
+
+        IEnumerable<BillingRow> filtered = _billingRows;
+
+        // ------------------------------
+        // SEARCH FILTER
+        // ------------------------------
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            filtered =
+                filtered
+                    .Where(r =>
+                        (r.CustomerName ?? string.Empty)
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase)
+                        ||
+                        (r.DeviceName ?? string.Empty)
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase)
+                        ||
+                        (r.RepairDescription ?? string.Empty)
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ------------------------------
+        // DATE RANGE FILTER
+        // ------------------------------
+
+        if (startDate.HasValue)
+        {
+            filtered =
+                filtered
+                    .Where(r =>
+                        r.CompletedDate.HasValue &&
+                        r.CompletedDate.Value.Date >=
+                        startDate.Value.Date);
+        }
+
+        if (endDate.HasValue)
+        {
+            filtered =
+                filtered
+                    .Where(r =>
+                        r.CompletedDate.HasValue &&
+                        r.CompletedDate.Value.Date <=
+                        endDate.Value.Date);
+        }
+
+        _filteredRows = filtered.ToList();
+
+        _currentPage = 1;
 
         UpdatePagination();
     }
@@ -600,5 +695,8 @@ public sealed partial class BillingPage : Page
 
         public string RepairDescription { get; set; }
             = string.Empty;
+
+        // ⬇⬇⬇ NEW
+        public DateTime? CompletedDate { get; set; }
     }
 }

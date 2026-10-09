@@ -37,46 +37,69 @@
 
         <!-- ACTION BAR -->
 
-        <StackPanel
+        <Grid
             Grid.Row="1"
-            Orientation="Horizontal"
-            Spacing="12">
+            ColumnSpacing="12">
 
-            <Button Click="AddUserButton_Click">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <SymbolIcon Symbol="Add"/>
-                    <TextBlock Text="Add User" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <Button
-                x:Name="EditUserButton"
-                Click="EditUserButton_Click"
-                IsEnabled="False">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <SymbolIcon Symbol="Edit"/>
-                    <TextBlock Text="Edit User" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
 
-            <Button
-                x:Name="DeleteUserButton"
-                Click="DeleteUserButton_Click"
-                IsEnabled="False">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <SymbolIcon Symbol="Delete"/>
-                    <TextBlock Text="Delete User" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+            <!-- SEARCH -->
 
-            <Button Click="RefreshButton_Click">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <SymbolIcon Symbol="Refresh"/>
-                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+            <TextBox
+                x:Name="SearchBox"
+                Grid.Column="0"
+                PlaceholderText="Search user..."
+                TextChanged="SearchBox_TextChanged"/>
 
-        </StackPanel>
+
+            <!-- BUTTONS -->
+
+            <StackPanel
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="12">
+
+                <Button Click="AddUserButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <SymbolIcon Symbol="Add"/>
+                        <TextBlock Text="Add User" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    x:Name="EditUserButton"
+                    Click="EditUserButton_Click"
+                    IsEnabled="False">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <SymbolIcon Symbol="Edit"/>
+                        <TextBlock Text="Edit User" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    x:Name="DeleteUserButton"
+                    Click="DeleteUserButton_Click"
+                    IsEnabled="False">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <SymbolIcon Symbol="Delete"/>
+                        <TextBlock Text="Delete User" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Click="RefreshButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <SymbolIcon Symbol="Refresh"/>
+                        <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+            </StackPanel>
+
+        </Grid>
 
 
         <!-- USER LIST -->

@@ -21,6 +21,7 @@ public sealed partial class UserManagementPage : Page
     // ==========================================
     // PAGINATION STATE
     // ==========================================
+    private List<UserRow> _filteredUserRows = new();
 
     private List<UserRow> _allUserRows = new();
     private int _currentPage = 1;
@@ -142,15 +143,7 @@ public sealed partial class UserManagementPage : Page
                     .OrderByDescending(r => r.User.Id)
                     .ToList();
 
-            _currentPage = 1;
-
-            UpdatePagination();
-
-            EditUserButton.IsEnabled =
-                UsersListView.SelectedItem != null;
-
-            DeleteUserButton.IsEnabled =
-                UsersListView.SelectedItem != null;
+            ApplyFilter();
         }
         catch (Exception ex)
         {
@@ -171,7 +164,7 @@ public sealed partial class UserManagementPage : Page
             Math.Max(
                 1,
                 (int)Math.Ceiling(
-                    (double)_allUserRows.Count /
+                    (double)_filteredUserRows.Count /
                     _pageSize));
 
         if (_currentPage > totalPages)
@@ -181,7 +174,7 @@ public sealed partial class UserManagementPage : Page
             _currentPage = 1;
 
         var paged =
-            _allUserRows
+            _filteredUserRows
                 .Skip((_currentPage - 1) * _pageSize)
                 .Take(_pageSize)
                 .ToList();
@@ -190,7 +183,7 @@ public sealed partial class UserManagementPage : Page
 
         PageInfoText.Text =
             $"Page {_currentPage} of {totalPages}  •  " +
-            $"{_allUserRows.Count} total";
+            $"{_filteredUserRows.Count} total";
 
         PreviousPageButton.IsEnabled = _currentPage > 1;
         NextPageButton.IsEnabled = _currentPage < totalPages;
@@ -218,7 +211,7 @@ public sealed partial class UserManagementPage : Page
             Math.Max(
                 1,
                 (int)Math.Ceiling(
-                    (double)_allUserRows.Count /
+                    (double)_filteredUserRows.Count /
                     _pageSize));
 
         if (_currentPage >= totalPages)
@@ -229,6 +222,63 @@ public sealed partial class UserManagementPage : Page
         UpdatePagination();
     }
 
+    // ==========================================
+    // SEARCH
+    // ==========================================
+
+    private void SearchBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        ApplyFilter();
+    }
+
+
+    private void ApplyFilter()
+    {
+        var search =
+            SearchBox.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            _filteredUserRows = _allUserRows;
+        }
+        else
+        {
+            _filteredUserRows =
+                _allUserRows
+                    .Where(r =>
+                        (r.User.UserName ?? string.Empty)
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase)
+                        ||
+                        (r.User.Email ?? string.Empty)
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase)
+                        ||
+                        r.Role
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase)
+                        ||
+                        r.CompanyName
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase)
+                        ||
+                        r.StatusText
+                            .Contains(
+                                search,
+                                StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+        }
+
+        _currentPage = 1;
+
+        UpdatePagination();
+    }
 
     // ==========================================
     // SELECTION CHANGED
